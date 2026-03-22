@@ -6,7 +6,10 @@ A ferramenta centraliza a engenharia de voo dos bombardeiros **Heinkel He-111 (v
 
 
 
-<img width="971" height="1454" alt="Screenshot 2026-03-22 130000" src="https://github.com/user-attachments/assets/0dafc48c-0e0c-42fc-80b7-65ecec51d91d" /><img width="956" height="891" alt="Screenshot 2026-03-22 130005" src="https://github.com/user-attachments/assets/a818eebe-9897-4142-b327-dd2478d5e2da" />
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0dafc48c-0e0c-42fc-80b7-65ecec51d91d" width="45%" />
+  <img src="https://github.com/user-attachments/assets/a818eebe-9897-4142-b327-dd2478d5e2da" width="45%" />
+</p>
 
 
 
