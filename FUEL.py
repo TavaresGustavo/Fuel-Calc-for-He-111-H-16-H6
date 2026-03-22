@@ -6,16 +6,14 @@ import math
 # 1. BASE DE DADOS: Pesos e Aeronaves
 # ==========================================
 
-# Pesos Reais Extraídos do IL-2 (em kg)
 peso_bombas = {
     "SC 50": 50, "SC 250": 250, "SC 500": 500,
     "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400  
 }
 
-# Banco de Dados Oficial: Aeronaves (PESOS CORRIGIDOS)
 db_avioes = {
     "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500, # Peso vazio + tripulação + óleo (sem combustível)
+        "peso_base_sem_combustivel": 9500,
         "peso_max": 14000, 
         "consumo_l_min": 10.5,
         "vel_cruzeiro_padrao": 320, 
@@ -71,7 +69,7 @@ db_avioes = {
         }
     },
     "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500, # Base real do Ju-52 sem o combustível
+        "peso_base_sem_combustivel": 7500,
         "peso_max": 11000, 
         "consumo_l_min": 12.0,  
         "vel_cruzeiro_padrao": 240, 
@@ -114,14 +112,14 @@ st.markdown("""
 st.title("🛩️ Painel Tático de Voo")
 st.markdown("Calculadora integrada de combustível, engenharia estrutural e mira de bombardeamento.")
 
-tab1, tab2 = st.tabs(["📊 Planeamento e Hangar", "🎯 Mira Lotfe 7 (Vento)"])
+tab1, tab2 = st.tabs(["📊 Planejamento e Hangar", "🎯 Mira Lotfe 7 (Vento)"])
 
 # ==========================================
 # 3. SEPARADOR 1: HANGAR E COMBUSTÍVEL
 # ==========================================
 with tab1:
     st.header("1. Plano de Voo (Opcional)")
-    arquivo_plano = st.file_uploader("📥 Importar ficheiro .json gerado no IL-2 Mission Planner", type=["json"])
+    arquivo_plano = st.file_uploader("📥 Importar arquivo .json gerado no IL-2 Mission Planner", type=["json"])
 
     usar_dados_importados = False
     dist_calc = 250.0  
@@ -137,15 +135,17 @@ with tab1:
             for i in range(len(coords) - 1):
                 p1 = coords[i]
                 p2 = coords[i+1]
+                # CORREÇÃO DA ESCALA (x 10 km por grid do mapa)
                 dist_total += math.hypot(p2['lng'] - p1['lng'], p2['lat'] - p1['lat'])
             
-            dist_calc = dist_total
+            dist_calc = dist_total * 10.0 
             vel_calc = float(rota.get("speed", 320.0))
+            nome_rota = rota.get("name", "Missão Importada")
             usar_dados_importados = True
             
-            st.success("✅ Rota importada com sucesso! Os dados de navegação foram bloqueados.")
+            st.success(f"✅ Rota '{nome_rota}' importada! Os dados de navegação foram sincronizados e bloqueados.")
         except Exception as e:
-            st.error("Erro ao ler o ficheiro JSON. Verifica se é o export correto do Mission Planner.")
+            st.error("Erro ao ler o ficheiro JSON. Certifique-se que é o export correto do Mission Planner.")
 
     st.divider()
 
@@ -157,15 +157,13 @@ with tab1:
         aviao = db_avioes[modelo_selecionado]
         st.caption(f"**Armamento Fixo:** {aviao['armamento_fixo']}")
         
-        # Desacoplamento total do Streamlit UI State para evitar o bug do JSON
+        # CORREÇÃO DO BUG DO CACHE: Usando chaves (keys) diferentes para forçar atualização
         if usar_dados_importados:
-            st.number_input("Distância Total da Rota (km)", value=float(dist_calc), disabled=True)
-            st.number_input("Velocidade Média Estimada (km/h)", value=float(vel_calc), disabled=True)
-            distancia_km = dist_calc
-            velocidade_estimada = vel_calc
+            distancia_km = st.number_input("Distância Total da Rota (km)", value=float(dist_calc), disabled=True, key="dist_lock")
+            velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", value=float(vel_calc), disabled=True, key="vel_lock")
         else:
-            distancia_km = st.number_input("Distância Total da Rota (km)", min_value=1.0, max_value=5000.0, value=250.0)
-            velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", min_value=150.0, max_value=450.0, value=float(aviao['vel_cruzeiro_padrao']))
+            distancia_km = st.number_input("Distância Total da Rota (km)", min_value=1.0, max_value=5000.0, value=250.0, key="dist_free")
+            velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", min_value=150.0, max_value=450.0, value=float(aviao['vel_cruzeiro_padrao']), key="vel_free")
         
         margem_reserva = st.slider("Reserva Extra de Combustível (%)", min_value=0, max_value=150, value=90, step=5)
 
@@ -188,9 +186,7 @@ with tab1:
     porcentagem_tanque = (combustivel_com_reserva / aviao["tanque_max_l"]) * 100
     if porcentagem_tanque > 100: porcentagem_tanque = 100
 
-    peso_combustivel = combustivel_com_reserva * 0.72 # Peso real do combustível adicionado
-    
-    # Cálculo corrigido: usa o peso base sem dobrar o combustível
+    peso_combustivel = combustivel_com_reserva * 0.72 
     peso_total_decolagem = aviao["peso_base_sem_combustivel"] + peso_mods + peso_bombas_total + peso_combustivel
 
     # --- DASHBOARD VISUAL ---
@@ -245,7 +241,6 @@ with tab2:
 
     st.divider()
 
-    # Motor Matemático da Mira
     tas_kmh = ias * (1 + (altitude / 1000) * 0.05)
     tas_ms = tas_kmh / 3.6
 
