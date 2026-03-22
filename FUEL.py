@@ -9,6 +9,7 @@ peso_bombas = {
 }
 
 # 2. Banco de Dados Oficial: He-111
+# 2. Banco de Dados Oficial: Aeronaves
 db_avioes = {
     "He-111 H-6": {
         "peso_vazio": 13727, "peso_max": 15239, "consumo_l_min": 10.5,
@@ -58,6 +59,26 @@ db_avioes = {
             "№16: 1 x SC 2500": peso_bombas["SC 2500"],
             "№17: 1 x SC 2500 + 16 x SC 50": peso_bombas["SC 2500"] + (16 * peso_bombas["SC 50"]),
             "№18: 1 x SC 2500 + 4 x SC 250": peso_bombas["SC 2500"] + (4 * peso_bombas["SC 250"])
+        }
+    },
+    "Ju-52/3M": {
+        "peso_vazio": 10003, 
+        "peso_max": 11333, 
+        "consumo_l_min": 12.0,  # AVISO: Consumo estimado
+        "vel_cruzeiro_padrao": 240, 
+        "tanque_max_l": 2450,   # AVISO: Capacidade estimada
+        "armamento_fixo": "Nenhum (Transporte)",
+        "modificacoes": {
+            "Padrão (Sem carga interna, sem torre)": 0,
+            "Rear turret (+130 kg)": 130,
+            "2300 kg of cargo": 2300,
+            "2300 kg of cargo + Rear turret (+2430 kg)": 2430,
+            "12 paratroopers (+1200 kg)": 1200,
+            "12 paratroopers + Rear turret (+1330 kg)": 1330
+        },
+        "presets_bombas": {
+            "№0: Empty (Sem Drop Containers)": 0,
+            "№2: 10 x MAB 250 containers": 2550
         }
     }
 }
