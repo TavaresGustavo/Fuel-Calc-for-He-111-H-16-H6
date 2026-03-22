@@ -4,6 +4,12 @@ Uma aplicação web desenvolvida em Python (Streamlit) para atuar como um painel
 
 A ferramenta centraliza a engenharia de voo dos bombardeiros **Heinkel He-111 (versões H-6 e H-16)** e oferece uma calculadora balística para a mira Lotfe 7, automatizando cálculos complexos de peso, combustível e compensação de vento.
 
+
+
+<img width="971" height="1454" alt="Screenshot 2026-03-22 130000" src="https://github.com/user-attachments/assets/0dafc48c-0e0c-42fc-80b7-65ecec51d91d" /><img width="956" height="891" alt="Screenshot 2026-03-22 130005" src="https://github.com/user-attachments/assets/a818eebe-9897-4142-b327-dd2478d5e2da" />
+
+
+
 ## 🚀 Funcionalidades Principais
 
 A interface é dividida em dois painéis operacionais focados na rotina do piloto:
