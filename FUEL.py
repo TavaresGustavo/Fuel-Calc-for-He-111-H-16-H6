@@ -135,10 +135,11 @@ with tab1:
             for i in range(len(coords) - 1):
                 p1 = coords[i]
                 p2 = coords[i+1]
-                # CORREÇÃO DA ESCALA (x 10 km por grid do mapa)
+                # CÁLCULO EUCLIDIANO
                 dist_total += math.hypot(p2['lng'] - p1['lng'], p2['lat'] - p1['lat'])
             
-            dist_calc = dist_total * 10.0 
+            # CORREÇÃO DEFINITIVA DA ESCALA DO MISSION PLANNER (x 3 km por unidade do mapa)
+            dist_calc = dist_total * 3.0 
             vel_calc = float(rota.get("speed", 320.0))
             nome_rota = rota.get("name", "Missão Importada")
             usar_dados_importados = True
@@ -157,7 +158,6 @@ with tab1:
         aviao = db_avioes[modelo_selecionado]
         st.caption(f"**Armamento Fixo:** {aviao['armamento_fixo']}")
         
-        # CORREÇÃO DO BUG DO CACHE: Usando chaves (keys) diferentes para forçar atualização
         if usar_dados_importados:
             distancia_km = st.number_input("Distância Total da Rota (km)", value=float(dist_calc), disabled=True, key="dist_lock")
             velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", value=float(vel_calc), disabled=True, key="vel_lock")
