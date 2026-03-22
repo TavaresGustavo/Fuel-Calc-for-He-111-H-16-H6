@@ -2,18 +2,24 @@ import streamlit as st
 import json
 import math
 
-# 1. Pesos Reais Extraídos do IL-2 (em kg)
+# ==========================================
+# 1. BASE DE DADOS: Pesos e Aeronaves
+# ==========================================
+
+# Pesos Reais Extraídos do IL-2 (em kg)
 peso_bombas = {
     "SC 50": 50, "SC 250": 250, "SC 500": 500,
     "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400  
 }
 
-# 2. Banco de Dados Oficial: He-111
-# 2. Banco de Dados Oficial: Aeronaves
+# Banco de Dados Oficial: Aeronaves (PESOS CORRIGIDOS)
 db_avioes = {
     "He-111 H-6": {
-        "peso_vazio": 13727, "peso_max": 15239, "consumo_l_min": 10.5,
-        "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
+        "peso_base_sem_combustivel": 9500, # Peso vazio + tripulação + óleo (sem combustível)
+        "peso_max": 14000, 
+        "consumo_l_min": 10.5,
+        "vel_cruzeiro_padrao": 320, 
+        "tanque_max_l": 3450,
         "armamento_fixo": "6 x 7.92 mm MG-15",
         "modificacoes": {
             "Padrão (Sem torres 20mm)": 0,
@@ -37,8 +43,11 @@ db_avioes = {
         }
     },
     "He-111 H-16": {
-        "peso_vazio": 13017, "peso_max": 15689, "consumo_l_min": 10.2,
-        "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
+        "peso_base_sem_combustivel": 9300,
+        "peso_max": 14000, 
+        "consumo_l_min": 10.2,
+        "vel_cruzeiro_padrao": 330, 
+        "tanque_max_l": 3450,
         "armamento_fixo": "4x 7.92mm MG-15 | 1x 20mm MG/FF | 1x 13mm MG-131",
         "modificacoes": {
             "Padrão (Armamento Fixo Integrado)": 0
@@ -62,11 +71,11 @@ db_avioes = {
         }
     },
     "Ju-52/3M": {
-        "peso_vazio": 10003, 
-        "peso_max": 11333, 
-        "consumo_l_min": 12.0,  # AVISO: Consumo estimado
+        "peso_base_sem_combustivel": 7500, # Base real do Ju-52 sem o combustível
+        "peso_max": 11000, 
+        "consumo_l_min": 12.0,  
         "vel_cruzeiro_padrao": 240, 
-        "tanque_max_l": 2450,   # AVISO: Capacidade estimada
+        "tanque_max_l": 2450,   
         "armamento_fixo": "Nenhum (Transporte)",
         "modificacoes": {
             "Padrão (Sem carga interna, sem torre)": 0,
@@ -83,28 +92,36 @@ db_avioes = {
     }
 }
 
-# 3. Construção da Interface
-st.set_page_config(page_title="Painel He-111", layout="wide")
+# ==========================================
+# 2. CONFIGURAÇÃO DA INTERFACE & CSS
+# ==========================================
+st.set_page_config(page_title="Painel Tático", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     header { background-color: transparent !important; }
+    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; padding-left: 2rem !important; padding-right: 2rem !important; }
+    [data-testid="stMetricValue"] { font-size: 1.3rem !important; color: #E2E2E2 !important; }
+    [data-testid="stMetricLabel"] { font-size: 0.85rem !important; }
+    h1 { font-size: 1.8rem !important; padding-bottom: 0.2rem !important; }
+    h2 { font-size: 1.3rem !important; padding-bottom: 0.2rem !important; }
+    div[data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
+    [data-testid="stAlert"] { padding: 0.5rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🛩️ Painel Tático de Voo: Heinkel He-111")
+st.title("🛩️ Painel Tático de Voo")
 st.markdown("Calculadora integrada de combustível, engenharia estrutural e mira de bombardeamento.")
 
-# Criação dos separadores
 tab1, tab2 = st.tabs(["📊 Planeamento e Hangar", "🎯 Mira Lotfe 7 (Vento)"])
 
 # ==========================================
-# SEPARADOR 1: HANGAR E COMBUSTÍVEL
+# 3. SEPARADOR 1: HANGAR E COMBUSTÍVEL
 # ==========================================
 with tab1:
     st.header("1. Plano de Voo (Opcional)")
-    arquivo_plano = st.file_uploader("📥 Importar arquivo .json gerado no IL-2 Mission Planner", type=["json"])
+    arquivo_plano = st.file_uploader("📥 Importar ficheiro .json gerado no IL-2 Mission Planner", type=["json"])
 
     usar_dados_importados = False
     dist_calc = 250.0  
@@ -124,10 +141,9 @@ with tab1:
             
             dist_calc = dist_total
             vel_calc = float(rota.get("speed", 320.0))
-            nome_rota = rota.get("name", "Missão Importada")
             usar_dados_importados = True
             
-            st.success(f"✅ Rota '{nome_rota}' importada! Dados travados pelas definições do ficheiro.")
+            st.success("✅ Rota importada com sucesso! Os dados de navegação foram bloqueados.")
         except Exception as e:
             st.error("Erro ao ler o ficheiro JSON. Verifica se é o export correto do Mission Planner.")
 
@@ -141,11 +157,15 @@ with tab1:
         aviao = db_avioes[modelo_selecionado]
         st.caption(f"**Armamento Fixo:** {aviao['armamento_fixo']}")
         
-        if not usar_dados_importados:
-            vel_calc = float(aviao['vel_cruzeiro_padrao'])
-        
-        distancia_km = st.number_input("Distância Total da Rota (km)", min_value=1.0, max_value=5000.0, value=float(dist_calc), disabled=usar_dados_importados)
-        velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", min_value=150.0, max_value=450.0, value=float(vel_calc), disabled=usar_dados_importados)
+        # Desacoplamento total do Streamlit UI State para evitar o bug do JSON
+        if usar_dados_importados:
+            st.number_input("Distância Total da Rota (km)", value=float(dist_calc), disabled=True)
+            st.number_input("Velocidade Média Estimada (km/h)", value=float(vel_calc), disabled=True)
+            distancia_km = dist_calc
+            velocidade_estimada = vel_calc
+        else:
+            distancia_km = st.number_input("Distância Total da Rota (km)", min_value=1.0, max_value=5000.0, value=250.0)
+            velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", min_value=150.0, max_value=450.0, value=float(aviao['vel_cruzeiro_padrao']))
         
         margem_reserva = st.slider("Reserva Extra de Combustível (%)", min_value=0, max_value=150, value=90, step=5)
 
@@ -157,9 +177,9 @@ with tab1:
         preset_selecionado = st.selectbox("Selecione o Preset de Bombas", list(aviao["presets_bombas"].keys()))
         peso_bombas_total = aviao["presets_bombas"][preset_selecionado]
 
-    # Motor de Cálculo (Tab 1)
     st.divider()
 
+    # --- MOTOR DE CÁLCULO ---
     tempo_voo_min = (distancia_km / velocidade_estimada) * 60
     combustivel_necessario = tempo_voo_min * aviao["consumo_l_min"]
     multiplicador_reserva = 1 + (margem_reserva / 100)
@@ -168,10 +188,12 @@ with tab1:
     porcentagem_tanque = (combustivel_com_reserva / aviao["tanque_max_l"]) * 100
     if porcentagem_tanque > 100: porcentagem_tanque = 100
 
-    peso_combustivel = combustivel_com_reserva * 0.72
-    peso_total_decolagem = aviao["peso_vazio"] + peso_mods + peso_bombas_total + peso_combustivel
+    peso_combustivel = combustivel_com_reserva * 0.72 # Peso real do combustível adicionado
+    
+    # Cálculo corrigido: usa o peso base sem dobrar o combustível
+    peso_total_decolagem = aviao["peso_base_sem_combustivel"] + peso_mods + peso_bombas_total + peso_combustivel
 
-    # Dashboard Visual (Tab 1)
+    # --- DASHBOARD VISUAL ---
     st.header("4. Relatório Final de Voo")
     res_col1, res_col2, res_col3 = st.columns(3)
 
@@ -187,7 +209,7 @@ with tab1:
 
     with res_col3:
         st.error("💣 CARGA ÚTIL")
-        st.metric(label="Peso das Bombas", value=f"{peso_bombas_total:.0f} kg")
+        st.metric(label="Peso das Bombas/Carga", value=f"{peso_bombas_total:.0f} kg")
         st.metric(label="Peso Estrutural Extra (Mods)", value=f"{peso_mods:.0f} kg")
 
     st.subheader("⚖️ Status Estrutural de Decolagem")
@@ -202,7 +224,7 @@ with tab1:
         st.error(f"❌ SOBRECARGA CRÍTICA! Peso de {peso_total_decolagem:.0f} kg excede o limite em {excesso:.0f} kg.")
 
 # ==========================================
-# SEPARADOR 2: CALCULADORA DE BOMBSIGHT
+# 4. SEPARADOR 2: CALCULADORA DE BOMBSIGHT
 # ==========================================
 with tab2:
     st.header("🎯 Calculadora Balística (Lotfe 7)")
@@ -223,32 +245,23 @@ with tab2:
 
     st.divider()
 
-    # Motor Matemático do Bombsight
-    # Conversão de IAS para TAS (Aproximação de 5% de aumento por cada 1000m)
+    # Motor Matemático da Mira
     tas_kmh = ias * (1 + (altitude / 1000) * 0.05)
     tas_ms = tas_kmh / 3.6
 
-    # Lógica de Vento (Triângulo de Velocidades)
-    # Diferença angular entre o vento e a proa do avião
     angulo_vento_rad = math.radians(dir_vento - proa_alvo)
     
-    # Deriva (Drift Angle) usando a Lei dos Senos
-    # Evitar divisão por zero se TAS for 0 (o que nunca acontece em voo, mas previne erros no código)
     try:
         sin_deriva = (vel_vento * math.sin(angulo_vento_rad)) / tas_ms
-        # Limitar o valor do seno entre -1 e 1 para evitar erros de domínio em ventos extremos irreais
         sin_deriva = max(-1.0, min(1.0, sin_deriva)) 
         deriva_rad = math.asin(sin_deriva)
         deriva_graus = math.degrees(deriva_rad)
     except:
         deriva_graus = 0.0
 
-    # Ground Speed (Velocidade Relativa ao Solo)
-    # GS = TAS * cos(deriva) - Vento * cos(angulo_vento)
     gs_ms = (tas_ms * math.cos(deriva_rad)) - (vel_vento * math.cos(angulo_vento_rad))
     gs_kmh = gs_ms * 3.6
 
-    # Outputs para inserir na mira
     st.subheader("⚙️ Dados para Inserir na Mira")
     r_col1, r_col2, r_col3 = st.columns(3)
 
@@ -261,7 +274,6 @@ with tab2:
         st.caption("Insere este valor na Lotfe 7")
 
     with r_col3:
-        # Formatação do texto da deriva para Esquerda/Direita
         direcao_deriva = "Direita" if deriva_graus > 0 else "Esquerda" if deriva_graus < 0 else "Nenhuma"
         st.metric(label="Ângulo de Deriva", value=f"{abs(deriva_graus):.1f}° {direcao_deriva}")
         st.caption("Corrige a mira lateralmente")
