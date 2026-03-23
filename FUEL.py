@@ -130,7 +130,7 @@ with st.sidebar:
     painel_telemetria_ativo()
 
 st.title("🛩️ Painel Tático C4ISR")
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog Híbrido", "🌐 Inteligência Global", "🛠️ Debug API"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog Híbrido", "🌐 Inteligência Global"])
 
 # ==========================================
 # ABA 1: HANGAR
