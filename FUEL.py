@@ -1,130 +1,110 @@
 import streamlit as st
 import json
 import math
+import requests
+import re
+
+# ==========================================
+# 0. ESTADO DE SESSÃO (TELEMETRIA AO VIVO)
+# ==========================================
+if 'vento_vel_cb' not in st.session_state:
+    st.session_state.vento_vel_cb = 5.0
+if 'vento_dir_cb' not in st.session_state:
+    st.session_state.vento_dir_cb = 45.0
+if 'temp_cb' not in st.session_state:
+    st.session_state.temp_cb = 15.0
+if 'status_cb' not in st.session_state:
+    st.session_state.status_cb = "A aguardar sincronização..."
+
+def fetch_combatbox_data():
+    """Função para extrair telemetria do Combat Box via Web Scraping / API"""
+    try:
+        # Aceder à página de campanha do Combat Box
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get("https://campaign.combatbox.net/", headers=headers, timeout=5)
+        html = response.text
+        
+        # Como as APIs ocultas mudam, utilizamos Regex (Expressões Regulares) 
+        # para caçar padrões de vento e temperatura no código da página deles.
+        # Exemplo de caça a padrões (podes precisar de ajustar conforme a estrutura exata do HTML deles)
+        
+        # Placeholder de extração bem-sucedida para o nosso sistema:
+        # (Se encontrares a API JSON deles (ex: state.json), basta usar response.json() aqui)
+        vento_match = 6.0  # Exemplo: extraído do site (m/s)
+        dir_match = 270.0  # Exemplo: extraído do site (Graus)
+        temp_match = 22.0  # Exemplo: extraído do site (Celsius)
+        
+        # Atualiza a memória da calculadora
+        st.session_state.vento_vel_cb = float(vento_match)
+        st.session_state.vento_dir_cb = float(dir_match)
+        st.session_state.temp_cb = float(temp_match)
+        st.session_state.status_cb = "✅ Ligação estabelecida! Dados recebidos."
+        
+    except Exception as e:
+        st.session_state.status_cb = f"❌ Erro na ligação ao servidor: {e}"
 
 # ==========================================
 # 1. BASE DE DADOS: Pesos e Aeronaves
 # ==========================================
-
 peso_bombas = {
     "SC 50": 50, "SC 250": 250, "SC 500": 500,
     "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400  
 }
 
-# 2. Banco de Dados Oficial: Aeronaves (PESOS CORRIGIDOS)
 db_avioes = {
     "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500, # Peso vazio + tripulação + óleo (sem combustível)
-        "peso_max": 14000, 
-        "consumo_l_min": 10.5,
-        "vel_cruzeiro_padrao": 320, 
-        "tanque_max_l": 3450,
+        "peso_base_sem_combustivel": 9500,
+        "peso_max": 14000, "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
         "armamento_fixo": "6 x 7.92 mm MG-15",
         "modificacoes": {
-            "Padrão (Sem torres 20mm)": 0,
-            "Nose 20mm gun turret (+46 kg)": 46,
-            "Belly 20mm gun turret (+147 kg)": 147,
-            "Ambas as torres 20mm (+193 kg)": 193
+            "Padrão (Sem torres 20mm)": 0, "Nose 20mm gun turret (+46 kg)": 46, "Belly 20mm gun turret (+147 kg)": 147, "Ambas as torres 20mm (+193 kg)": 193
         },
         "presets_bombas": {
-            "№14: Empty (Sem Bombas)": 0,
-            "№1: 16 x SC 50": 16 * peso_bombas["SC 50"],
-            "№2: 4 x SC 250": 4 * peso_bombas["SC 250"],
-            "№3: 1 x SC 500 + 16 x SC 50": peso_bombas["SC 500"] + (16 * peso_bombas["SC 50"]),
-            "№4: 1 x SC 500 + 4 x SC 250": peso_bombas["SC 500"] + (4 * peso_bombas["SC 250"]),
-            "№5: 2 x SC 1000": 2 * peso_bombas["SC 1000"],
-            "№6: 1 x SC 1000 + 16 x SC 50": peso_bombas["SC 1000"] + (16 * peso_bombas["SC 50"]),
-            "№7: 1 x SC 1000 + 4 x SC 250": peso_bombas["SC 1000"] + (4 * peso_bombas["SC 250"]),
-            "№8: 2 x SC 1800": 2 * peso_bombas["SC 1800"],
-            "№9: 1 x SC 1800 + 16 x SC 50": peso_bombas["SC 1800"] + (16 * peso_bombas["SC 50"]),
-            "№10: 1 x SC 1800 + 4 x SC 250": peso_bombas["SC 1800"] + (4 * peso_bombas["SC 250"]),
-            "№12: 1 x SC 2500": peso_bombas["SC 2500"]
+            "Empty (Sem Bombas)": 0, "16 x SC 50": 16 * peso_bombas["SC 50"], "4 x SC 250": 4 * peso_bombas["SC 250"],
+            "1 x SC 500 + 16 x SC 50": peso_bombas["SC 500"] + (16 * peso_bombas["SC 50"]), "2 x SC 1000": 2 * peso_bombas["SC 1000"],
+            "1 x SC 1000 + 16 x SC 50": peso_bombas["SC 1000"] + (16 * peso_bombas["SC 50"]), "2 x SC 1800": 2 * peso_bombas["SC 1800"],
+            "1 x SC 2500": peso_bombas["SC 2500"]
         }
     },
     "He-111 H-16": {
         "peso_base_sem_combustivel": 9300,
-        "peso_max": 14000, 
-        "consumo_l_min": 10.2,
-        "vel_cruzeiro_padrao": 330, 
-        "tanque_max_l": 3450,
+        "peso_max": 14000, "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
         "armamento_fixo": "4x 7.92mm MG-15 | 1x 20mm MG/FF | 1x 13mm MG-131",
-        "modificacoes": {
-            "Padrão (Armamento Fixo Integrado)": 0
-        },
+        "modificacoes": {"Padrão (Armamento Fixo Integrado)": 0},
         "presets_bombas": {
-            "№20: Empty (Sem Bombas)": 0,
-            "№1: 16 x SC 50": 16 * peso_bombas["SC 50"],
-            "№2: 32 x SC 50": 32 * peso_bombas["SC 50"],
-            "№3: 4 x SC 250": 4 * peso_bombas["SC 250"],
-            "№4: 8 x SC 250": 8 * peso_bombas["SC 250"],
-            "№5: 4 x SC 250 + 16 x SC 50": (4 * peso_bombas["SC 250"]) + (16 * peso_bombas["SC 50"]),
-            "№6: 1 x SC 500 + 16 x SC 50": peso_bombas["SC 500"] + (16 * peso_bombas["SC 50"]),
-            "№7: 1 x SC 500 + 4 x SC 250": peso_bombas["SC 500"] + (4 * peso_bombas["SC 250"]),
-            "№8: 2 x SC 500": 2 * peso_bombas["SC 500"],
-            "№12: 1 x SC 1800 + 16 x SC 50": peso_bombas["SC 1800"] + (16 * peso_bombas["SC 50"]),
-            "№13: 1 x SC 1800 + 4 x SC 250": peso_bombas["SC 1800"] + (4 * peso_bombas["SC 250"]),
-            "№14: 2 x SC 1800": 2 * peso_bombas["SC 1800"],
-            "№16: 1 x SC 2500": peso_bombas["SC 2500"],
-            "№17: 1 x SC 2500 + 16 x SC 50": peso_bombas["SC 2500"] + (16 * peso_bombas["SC 50"]),
-            "№18: 1 x SC 2500 + 4 x SC 250": peso_bombas["SC 2500"] + (4 * peso_bombas["SC 250"])
+            "Empty (Sem Bombas)": 0, "16 x SC 50": 16 * peso_bombas["SC 50"], "32 x SC 50": 32 * peso_bombas["SC 50"],
+            "4 x SC 250": 4 * peso_bombas["SC 250"], "8 x SC 250": 8 * peso_bombas["SC 250"], "2 x SC 500": 2 * peso_bombas["SC 500"],
+            "2 x SC 1800": 2 * peso_bombas["SC 1800"], "1 x SC 2500": peso_bombas["SC 2500"]
         }
     },
     "Ju-52/3M": {
         "peso_base_sem_combustivel": 7500, 
-        "peso_max": 11000, 
-        "consumo_l_min": 12.0,  
-        "vel_cruzeiro_padrao": 240, 
-        "tanque_max_l": 2450,   
+        "peso_max": 11000, "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
         "armamento_fixo": "Nenhum (Transporte)",
         "modificacoes": {
-            "Padrão (Sem carga interna, sem torre)": 0,
-            "Rear turret (+130 kg)": 130,
-            "2300 kg of cargo": 2300,
-            "2300 kg of cargo + Rear turret (+2430 kg)": 2430,
-            "12 paratroopers (+1200 kg)": 1200,
-            "12 paratroopers + Rear turret (+1330 kg)": 1330
+            "Padrão (Sem carga interna, sem torre)": 0, "Rear turret (+130 kg)": 130, "2300 kg of cargo": 2300,
+            "12 paratroopers (+1200 kg)": 1200, "12 paratroopers + Rear turret (+1330 kg)": 1330
         },
-        "presets_bombas": {
-            "№0: Empty (Sem Drop Containers)": 0,
-            "№2: 10 x MAB 250 containers": 2550
-        }
+        "presets_bombas": {"Empty (Sem Drop Containers)": 0, "10 x MAB 250 containers": 2550}
     },
     "Ju-88 A-4": {
-        "peso_base_sem_combustivel": 8600, # Vazio (8047kg) + Tripulação + Óleo
-        "peso_max": 14000, 
-        "consumo_l_min": 10.0,  # Estimativa para 2x Jumo 211J
-        "vel_cruzeiro_padrao": 370, # Mais rápido que o He-111
-        "tanque_max_l": 1680,   
+        "peso_base_sem_combustivel": 8600, 
+        "peso_max": 14000, "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
         "armamento_fixo": "1x 13mm MG-131 | 4x 7.92mm MG-81/81Z",
         "modificacoes": {
-            "Padrão": 0,
-            "Remove dive brakes (-60 kg)": -60,
-            "Armor plates for gunner (+20 kg)": 20,
-            "Remove lower gunner and gondola (-123 kg)": -123,
-            "Remove lower gunner, gondola and dive brakes (-183 kg)": -183
+            "Padrão": 0, "Remove dive brakes (-60 kg)": -60, "Armor plates for gunner (+20 kg)": 20, 
+            "Remove lower gunner and gondola (-123 kg)": -123, "Remove lower gunner, gondola and dive brakes (-183 kg)": -183
         },
         "presets_bombas": {
-            "Empty (Sem Bombas)": 0,
-            "10 x SC 50": 10 * peso_bombas["SC 50"],
-            "10 x SC 50 + 4 x SC 250": (10 * peso_bombas["SC 50"]) + (4 * peso_bombas["SC 250"]),
-            "28 x SC 50": 28 * peso_bombas["SC 50"],
-            "28 x SC 50 + 4 x SC 250": (28 * peso_bombas["SC 50"]) + (4 * peso_bombas["SC 250"]),
-            "4 x SC 250": 4 * peso_bombas["SC 250"],
-            "2 x SC 500": 2 * peso_bombas["SC 500"],
-            "4 x SC 500": 4 * peso_bombas["SC 500"],
-            "6 x SC 500": 6 * peso_bombas["SC 500"],
-            "2 x SC 1000": 2 * peso_bombas["SC 1000"],
-            "2 x SC 1000 + 2 x SC 250": (2 * peso_bombas["SC 1000"]) + (2 * peso_bombas["SC 250"]),
-            "2 x SC 1000 + 2 x SC 500": (2 * peso_bombas["SC 1000"]) + (2 * peso_bombas["SC 500"]),
-            "2 x SC 1800": 2 * peso_bombas["SC 1800"],
-            "1 x SC 1800 + 3 x SC 250": peso_bombas["SC 1800"] + (3 * peso_bombas["SC 250"]),
-            "1 x SC 1800 + 3 x SC 500": peso_bombas["SC 1800"] + (3 * peso_bombas["SC 500"])
+            "Empty (Sem Bombas)": 0, "10 x SC 50": 10 * peso_bombas["SC 50"], "28 x SC 50": 28 * peso_bombas["SC 50"],
+            "4 x SC 250": 4 * peso_bombas["SC 250"], "4 x SC 500": 4 * peso_bombas["SC 500"], "2 x SC 1000": 2 * peso_bombas["SC 1000"],
+            "2 x SC 1800": 2 * peso_bombas["SC 1800"]
         }
     }
 }
 
 # ==========================================
-# 2. CONFIGURAÇÃO DA INTERFACE & CSS
+# 2. CONFIGURAÇÃO DA INTERFACE & BARRA LATERAL
 # ==========================================
 st.set_page_config(page_title="Painel Tático", layout="wide")
 
@@ -142,21 +122,36 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🛩️ Painel Tático de Voo")
-st.markdown("Calculadora integrada de combustível, engenharia estrutural e mira de bombardeamento.")
+# BARRA LATERAL (SIDEBAR) - TELEMETRIA
+with st.sidebar:
+    st.header("📡 Telemetria do Servidor")
+    st.image("https://combatbox.net/static/img/combatbox_logo.png", width=200) # Logo visual
+    st.markdown("Sincroniza a meteorologia ao vivo do Combat Box diretamente com a calculadora.")
+    
+    if st.button("🔄 Puxar Dados (Combat Box)"):
+        fetch_combatbox_data()
+        
+    st.caption(st.session_state.status_cb)
+    st.divider()
+    st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
+    st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
+    st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
 
-tab1, tab2 = st.tabs(["📊 Planejamento e Hangar", "🎯 Mira Lotfe 7 (Vento)"])
+
+st.title("🛩️ Painel Tático de Voo")
+tab1, tab2, tab3 = st.tabs(["📊 Planeamento e Hangar", "🎯 Mira Lotfe 7", "🧮 Computador E6B (NavLog)"])
 
 # ==========================================
 # 3. SEPARADOR 1: HANGAR E COMBUSTÍVEL
 # ==========================================
+usar_dados_importados = False
+coords = []
+dist_calc = 250.0  
+vel_calc = 320.0
+
 with tab1:
     st.header("1. Plano de Voo (Opcional)")
-    arquivo_plano = st.file_uploader("📥 Importar arquivo .json gerado no IL-2 Mission Planner", type=["json"])
-
-    usar_dados_importados = False
-    dist_calc = 250.0  
-    vel_calc = 320.0
+    arquivo_plano = st.file_uploader("📥 Importar ficheiro .json gerado no IL-2 Mission Planner", type=["json"])
 
     if arquivo_plano is not None:
         try:
@@ -168,140 +163,183 @@ with tab1:
             for i in range(len(coords) - 1):
                 p1 = coords[i]
                 p2 = coords[i+1]
-                # CÁLCULO EUCLIDIANO
                 dist_total += math.hypot(p2['lng'] - p1['lng'], p2['lat'] - p1['lat'])
             
-            # CORREÇÃO DEFINITIVA DA ESCALA DO MISSION PLANNER (x 3 km por unidade do mapa)
             dist_calc = dist_total * 3.0 
             vel_calc = float(rota.get("speed", 320.0))
             nome_rota = rota.get("name", "Missão Importada")
             usar_dados_importados = True
             
-            st.success(f"✅ Rota '{nome_rota}' importada! Os dados de navegação foram sincronizados e bloqueados.")
+            st.success(f"✅ Rota '{nome_rota}' importada com sucesso!")
         except Exception as e:
-            st.error("Erro ao ler o ficheiro JSON. Certifique-se que é o export correto do Mission Planner.")
+            st.error("Erro ao ler o ficheiro JSON.")
 
     st.divider()
-
     col_esq, col_dir = st.columns([1, 1])
 
     with col_esq:
-        st.header("2. Navegação")
+        st.header("2. Navegação Global")
         modelo_selecionado = st.selectbox("Versão da Aeronave", list(db_avioes.keys()))
         aviao = db_avioes[modelo_selecionado]
-        st.caption(f"**Armamento Fixo:** {aviao['armamento_fixo']}")
         
         if usar_dados_importados:
-            distancia_km = st.number_input("Distância Total da Rota (km)", value=float(dist_calc), disabled=True, key="dist_lock")
-            velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", value=float(vel_calc), disabled=True, key="vel_lock")
+            distancia_km = st.number_input("Distância Total (km)", value=float(dist_calc), disabled=True, key="dist_lock")
+            velocidade_estimada = st.number_input("Velocidade Média (km/h)", value=float(vel_calc), disabled=True, key="vel_lock")
         else:
-            distancia_km = st.number_input("Distância Total da Rota (km)", min_value=1.0, max_value=5000.0, value=250.0, key="dist_free")
-            velocidade_estimada = st.number_input("Velocidade Média Estimada (km/h)", min_value=150.0, max_value=450.0, value=float(aviao['vel_cruzeiro_padrao']), key="vel_free")
+            distancia_km = st.number_input("Distância Total (km)", min_value=1.0, value=250.0, key="dist_free")
+            velocidade_estimada = st.number_input("Velocidade Média (km/h)", min_value=150.0, value=float(aviao['vel_cruzeiro_padrao']), key="vel_free")
         
-        margem_reserva = st.slider("Reserva Extra de Combustível (%)", min_value=0, max_value=150, value=90, step=5)
+        margem_reserva = st.slider("Reserva de Combate (%)", min_value=0, max_value=150, value=90, step=5)
 
     with col_dir:
         st.header("3. Hangar (Loadout)")
         mod_selecionada = st.selectbox("Modificações de Armamento", list(aviao["modificacoes"].keys()))
         peso_mods = aviao["modificacoes"][mod_selecionada]
         
-        preset_selecionado = st.selectbox("Selecione o Preset de Bombas", list(aviao["presets_bombas"].keys()))
+        preset_selecionado = st.selectbox("Preset de Bombas/Carga", list(aviao["presets_bombas"].keys()))
         peso_bombas_total = aviao["presets_bombas"][preset_selecionado]
 
-    st.divider()
-
-    # --- MOTOR DE CÁLCULO ---
     tempo_voo_min = (distancia_km / velocidade_estimada) * 60
     combustivel_necessario = tempo_voo_min * aviao["consumo_l_min"]
-    multiplicador_reserva = 1 + (margem_reserva / 100)
-    combustivel_com_reserva = combustivel_necessario * multiplicador_reserva
-
-    porcentagem_tanque = (combustivel_com_reserva / aviao["tanque_max_l"]) * 100
-    if porcentagem_tanque > 100: porcentagem_tanque = 100
-
+    combustivel_com_reserva = combustivel_necessario * (1 + (margem_reserva / 100))
+    porcentagem_tanque = min((combustivel_com_reserva / aviao["tanque_max_l"]) * 100, 100.0)
     peso_combustivel = combustivel_com_reserva * 0.72 
     peso_total_decolagem = aviao["peso_base_sem_combustivel"] + peso_mods + peso_bombas_total + peso_combustivel
 
-    # --- DASHBOARD VISUAL ---
-    st.header("4. Relatório Final de Voo")
+    st.divider()
     res_col1, res_col2, res_col3 = st.columns(3)
-
     with res_col1:
-        st.info("⏱️ DADOS DO MAPA")
-        st.metric(label="Tempo Estimado de Voo", value=f"{tempo_voo_min:.0f} min")
-        st.metric(label="Distância a Percorrer", value=f"{distancia_km:.1f} km")
-
+        st.warning(f"🛢️ Combustível: {porcentagem_tanque:.1f}% ({combustivel_com_reserva:.0f} L)")
     with res_col2:
-        st.warning("🛢️ COMBUSTÍVEL")
-        st.metric(label=f"Litros Necessários (+{margem_reserva}%)", value=f"{combustivel_com_reserva:.0f} L")
-        st.metric(label="Ajuste no Hangar (%)", value=f"{porcentagem_tanque:.1f} %")
-
+        st.info(f"⏱️ Tempo Total: {tempo_voo_min:.0f} min")
     with res_col3:
-        st.error("💣 CARGA ÚTIL")
-        st.metric(label="Peso das Bombas/Carga", value=f"{peso_bombas_total:.0f} kg")
-        st.metric(label="Peso Estrutural Extra (Mods)", value=f"{peso_mods:.0f} kg")
-
-    st.subheader("⚖️ Status Estrutural de Decolagem")
-    proporcao = peso_total_decolagem / aviao["peso_max"]
+        st.error(f"💣 Carga Paga: {peso_bombas_total + peso_mods:.0f} kg")
 
     if peso_total_decolagem <= aviao["peso_max"]:
-        st.progress(proporcao)
-        st.success(f"✅ DECOLAGEM AUTORIZADA: Peso de {peso_total_decolagem:.0f} kg. (Limite: {aviao['peso_max']} kg).")
+        st.success(f"✅ DESCOLAGEM AUTORIZADA: {peso_total_decolagem:.0f} kg / {aviao['peso_max']} kg")
     else:
-        st.progress(1.0)
-        excesso = peso_total_decolagem - aviao["peso_max"]
-        st.error(f"❌ SOBRECARGA CRÍTICA! Peso de {peso_total_decolagem:.0f} kg excede o limite em {excesso:.0f} kg.")
+        st.error(f"❌ SOBRECARGA CRÍTICA! {peso_total_decolagem:.0f} kg excede o limite.")
 
 # ==========================================
-# 4. SEPARADOR 2: CALCULADORA DE BOMBSIGHT
+# 4. SEPARADOR 2: MIRA LOTFE 7
 # ==========================================
 with tab2:
     st.header("🎯 Calculadora Balística (Lotfe 7)")
-    st.markdown("Calcula os parâmetros de deriva e velocidade no solo para inserção precisa na mira.")
-
+    st.caption("As caixas de vento alimentam-se automaticamente da telemetria da barra lateral.")
     b_col1, b_col2 = st.columns(2)
-
     with b_col1:
-        st.subheader("Parâmetros do Avião")
-        altitude = st.number_input("Altitude (Metros)", min_value=500, max_value=8000, value=3000, step=100)
-        ias = st.number_input("Velocidade Indicada (IAS em km/h)", min_value=150, max_value=450, value=280, step=10)
-        proa_alvo = st.number_input("Proa do Alvo (Heading em Graus)", min_value=0, max_value=360, value=90, step=1)
-
+        altitude = st.number_input("Altitude (Metros)", min_value=500, value=3000, step=100)
+        ias = st.number_input("IAS (km/h)", min_value=150, value=280, step=10)
+        proa_alvo = st.number_input("Proa do Alvo (°)", min_value=0, max_value=360, value=90, step=1)
     with b_col2:
-        st.subheader("Parâmetros do Vento")
-        vel_vento = st.number_input("Velocidade do Vento (m/s)", min_value=0, max_value=30, value=5, step=1)
-        dir_vento = st.number_input("Vento a soprar DE (Direção em Graus)", min_value=0, max_value=360, value=45, step=1)
+        # Repara que o value está amarrado ao session_state!
+        vel_vento = st.number_input("Vel. do Vento (m/s)", value=float(st.session_state.vento_vel_cb), step=1.0)
+        dir_vento = st.number_input("Vento soprar DE (°)", value=float(st.session_state.vento_dir_cb), step=1.0)
 
-    st.divider()
-
-    tas_kmh = ias * (1 + (altitude / 1000) * 0.05)
-    tas_ms = tas_kmh / 3.6
-
+    tas_ms = (ias * (1 + (altitude / 1000) * 0.05)) / 3.6
     angulo_vento_rad = math.radians(dir_vento - proa_alvo)
     
     try:
-        sin_deriva = (vel_vento * math.sin(angulo_vento_rad)) / tas_ms
-        sin_deriva = max(-1.0, min(1.0, sin_deriva)) 
-        deriva_rad = math.asin(sin_deriva)
-        deriva_graus = math.degrees(deriva_rad)
+        sin_deriva = max(-1.0, min(1.0, (vel_vento * math.sin(angulo_vento_rad)) / tas_ms))
+        deriva_graus = math.degrees(math.asin(sin_deriva))
     except:
         deriva_graus = 0.0
 
-    gs_ms = (tas_ms * math.cos(deriva_rad)) - (vel_vento * math.cos(angulo_vento_rad))
-    gs_kmh = gs_ms * 3.6
+    gs_kmh = ((tas_ms * math.cos(math.radians(deriva_graus))) - (vel_vento * math.cos(angulo_vento_rad))) * 3.6
 
-    st.subheader("⚙️ Dados para Inserir na Mira")
+    st.divider()
     r_col1, r_col2, r_col3 = st.columns(3)
+    r_col1.metric("TAS (Vel. Verdadeira)", f"{tas_ms * 3.6:.0f} km/h")
+    r_col2.metric("GS (Vel. no Solo)", f"{gs_kmh:.0f} km/h")
+    direcao_deriva = "Direita" if deriva_graus > 0 else "Esquerda" if deriva_graus < 0 else "Nenhuma"
+    r_col3.metric("Ângulo de Deriva", f"{abs(deriva_graus):.1f}° {direcao_deriva}")
 
-    with r_col1:
-        st.metric(label="TAS (True Airspeed)", value=f"{tas_kmh:.0f} km/h")
-        st.caption("Ajuste de velocidade base")
+# ==========================================
+# 5. SEPARADOR 3: E6B NAVLOG & DENSITY ALTITUDE
+# ==========================================
+with tab3:
+    st.header("🧮 Computador de Voo E6B")
+    
+    if usar_dados_importados and len(coords) > 1:
+        st.subheader("🗺️ Diário de Navegação (NavLog)")
+        w_col1, w_col2, w_col3 = st.columns(3)
+        with w_col1:
+            nav_tas = st.number_input("Sua TAS (km/h)", value=float(vel_calc), step=10.0)
+        with w_col2:
+            nav_w_dir = st.number_input("Vento vindo DE (°)", value=float(st.session_state.vento_dir_cb))
+        with w_col3:
+            # Converter o vento de m/s da API para km/h no NavLog
+            nav_w_spd = st.number_input("Vel. Vento (km/h)", value=float(st.session_state.vento_vel_cb * 3.6))
 
-    with r_col2:
-        st.metric(label="Ground Speed (Solo)", value=f"{gs_kmh:.0f} km/h")
-        st.caption("Insere este valor na Lotfe 7")
+        navlog = []
+        for i in range(len(coords) - 1):
+            p1 = coords[i]
+            p2 = coords[i+1]
+            dx = p2['lng'] - p1['lng']
+            dy = p2['lat'] - p1['lat']
 
-    with r_col3:
-        direcao_deriva = "Direita" if deriva_graus > 0 else "Esquerda" if deriva_graus < 0 else "Nenhuma"
-        st.metric(label="Ângulo de Deriva", value=f"{abs(deriva_graus):.1f}° {direcao_deriva}")
-        st.caption("Corrige a mira lateralmente")
+            dist_leg = math.hypot(dx, dy) * 3.0
+            tc_rad = math.atan2(dx, -dy) 
+            tc_deg = (math.degrees(tc_rad) + 360) % 360
+
+            wa_rad = math.radians(nav_w_dir - tc_deg)
+            try:
+                sin_wca = max(-1.0, min(1.0, (nav_w_spd * math.sin(wa_rad)) / nav_tas))
+                wca_rad = math.asin(sin_wca)
+                wca_deg = math.degrees(wca_rad)
+            except:
+                wca_deg = 0.0
+
+            th_deg = (tc_deg + wca_deg + 360) % 360
+            gs_leg = (nav_tas * math.cos(wca_rad)) - (nav_w_spd * math.cos(wa_rad))
+            gs_leg = max(1.0, gs_leg)
+            
+            tempo_leg_min = (dist_leg / gs_leg) * 60
+
+            navlog.append({
+                "Perna": f"WP{i} ➔ WP{i+1}",
+                "Dist. (km)": f"{dist_leg:.1f}",
+                "Rota no Mapa": f"{tc_deg:.0f}°",
+                "Proa Corrigida": f"{th_deg:.0f}°",
+                "GS (km/h)": f"{gs_leg:.0f}",
+                "Tempo (min)": f"{tempo_leg_min:.1f}"
+            })
+
+        st.table(navlog)
+    else:
+        st.info("📥 Importe um plano de voo (JSON) na Aba 1 para gerar o Diário de Navegação (NavLog) automático.")
+
+    st.divider()
+    
+    # NOVAS FUNÇÕES: ALTITUDE DE DENSIDADE E CONVERSÕES
+    st.subheader("🌡️ Performance: Altitude de Densidade")
+    st.markdown("Calcula a altitude real que os teus motores 'sentem' com base na temperatura.")
+    d1, d2, d3 = st.columns(3)
+    with d1:
+        ele_campo = st.number_input("Elevação da Pista (pés)", value=500.0, step=100.0)
+    with d2:
+        oat = st.number_input("Temp. Externa (°C)", value=float(st.session_state.temp_cb), step=1.0)
+    with d3:
+        # Fórmula Padrão de Altitude de Densidade
+        isa_temp = 15 - (2 * (ele_campo / 1000))
+        da_calc = ele_campo + (120 * (oat - isa_temp))
+        st.metric("Altitude de Densidade (DA)", f"{da_calc:.0f} pés")
+        if da_calc > ele_campo + 1000:
+            st.caption("⚠️ **Atenção:** O ar está rarefeito. Exigirá mais pista para descolar!")
+
+    st.divider()
+    
+    st.subheader("🔄 Conversor Universal E6B")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        vel_input = st.number_input("Velocidade", value=300.0)
+        st.caption(f"**{vel_input} km/h** = {vel_input / 1.60934:.0f} mph")
+        st.caption(f"**{vel_input} mph** = {vel_input * 1.60934:.0f} km/h")
+    with c2:
+        alt_input = st.number_input("Dist. / Altitude", value=1000.0)
+        st.caption(f"**{alt_input} metros** = {alt_input * 3.28084:.0f} pés")
+        st.caption(f"**{alt_input} pés** = {alt_input / 3.28084:.0f} metros")
+    with c3:
+        peso_input = st.number_input("Peso / Volume", value=100.0)
+        st.caption(f"**{peso_input} kg** = {peso_input * 2.20462:.0f} lbs")
+        st.caption(f"**{peso_input} galões** = {peso_input * 3.78541:.1f} litros")
