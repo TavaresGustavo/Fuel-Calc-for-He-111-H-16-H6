@@ -21,22 +21,29 @@ if 'nuvens_amanha_cb' not in st.session_state: st.session_state.nuvens_amanha_cb
 if 'status_cb' not in st.session_state: st.session_state.status_cb = "A aguardar sincronização..."
 if 'dados_campanha' not in st.session_state: st.session_state.dados_campanha = None
 
+# Memória Híbrida do NavLog
+if 'navlog_manual' not in st.session_state:
+    st.session_state.navlog_manual = [{"Perna": "Base ➔ Alvo", "Distância (km)": 50.0, "Rumo (TC)": 90.0}]
+if 'vel_calc' not in st.session_state: st.session_state.vel_calc = 320.0
+if 'dist_calc' not in st.session_state: st.session_state.dist_calc = 250.0
+if 'usar_dados_importados' not in st.session_state: st.session_state.usar_dados_importados = False
+if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = None
+
+
 # ==========================================
 # 1. FUNÇÕES DA API E TRADUÇÃO
 # ==========================================
-@st.cache_data(ttl=3600) # Guarda a tradução na memória por 1 hora para não travar o app
+@st.cache_data(ttl=3600)
 def traduzir_texto(texto):
     if not texto or texto.strip() == "":
         return ""
     try:
-        # O motor do Google geralmente preserva nomes próprios (cidades e aeronaves) automaticamente
         tradutor = GoogleTranslator(source='en', target='pt')
         return tradutor.translate(texto)
     except Exception:
-        return texto # Se o tradutor falhar, mostra em inglês para não dar erro
+        return texto 
 
 def fetch_combatbox_data():
-    """Extrai os dados da missão atual e a previsão do dia seguinte"""
     try:
         api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
         response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
@@ -102,7 +109,7 @@ db_avioes = {
 # ==========================================
 # 3. INTERFACE E BARRA LATERAL
 # ==========================================
-st.set_page_config(page_title="Painel Tático", layout="wide")
+st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide")
 st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
 
 with st.sidebar:
@@ -123,37 +130,52 @@ with st.sidebar:
     painel_telemetria_ativo()
 
 st.title("🛩️ Painel Tático C4ISR")
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog", "🌐 Inteligência Global", "🛠️ Debug API"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog Híbrido", "🌐 Inteligência Global", "🛠️ Debug API"])
 
 # ==========================================
 # ABA 1: HANGAR
 # ==========================================
-usar_dados_importados = False
-coords = []
-dist_calc = 250.0  
-vel_calc = 320.0
-
 with tab1:
-    arquivo_plano = st.file_uploader("📥 Importar .json do Mission Planner", type=["json"])
+    arquivo_plano = st.file_uploader("📥 Importar .json do Mission Planner (Opcional)", type=["json"])
+    
+    # Motor de Leitura de JSON com proteção contra sobrescrita contínua
     if arquivo_plano is not None:
-        try:
-            dados_plano = json.load(arquivo_plano)
-            if "routes" in dados_plano and len(dados_plano["routes"]) > 0 and "latLngs" in dados_plano["routes"][0]:
-                rota = dados_plano["routes"][0]
-                coords = rota["latLngs"]
-                dist_total = sum(math.hypot(coords[i+1]['lng'] - coords[i]['lng'], coords[i+1]['lat'] - coords[i]['lat']) for i in range(len(coords)-1))
-                dist_calc = dist_total * 3.0 
-                vel_calc = float(rota.get("speed", 320.0))
-                usar_dados_importados = True
-                st.success("✅ Rota tática importada!")
-        except:
-            st.error("Erro ao ler JSON.")
+        file_content = arquivo_plano.getvalue()
+        current_hash = hash(file_content)
+        
+        # Só atualiza a tabela do NavLog no exato momento em que o ficheiro é enviado
+        if st.session_state.last_file_hash != current_hash:
+            st.session_state.last_file_hash = current_hash
+            try:
+                dados_plano = json.loads(file_content)
+                if "routes" in dados_plano and len(dados_plano["routes"]) > 0 and "latLngs" in dados_plano["routes"][0]:
+                    rota = dados_plano["routes"][0]
+                    coords = rota["latLngs"]
+                    
+                    dist_total = 0.0
+                    navlog_temp = []
+                    for i in range(len(coords)-1):
+                        dx = coords[i+1]['lng'] - coords[i]['lng']
+                        dy = coords[i+1]['lat'] - coords[i]['lat']
+                        dist = math.hypot(dx, dy) * 3.0
+                        dist_total += dist
+                        tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
+                        navlog_temp.append({"Perna": f"WP{i} ➔ WP{i+1}", "Distância (km)": round(dist, 1), "Rumo (TC)": round(tc_deg, 0)})
+                    
+                    st.session_state.navlog_manual = navlog_temp
+                    st.session_state.dist_calc = dist_total
+                    st.session_state.vel_calc = float(rota.get("speed", 320.0))
+                    st.session_state.usar_dados_importados = True
+                    
+                    st.success("✅ Rota tática importada! O NavLog (Aba 3) foi preenchido automaticamente.")
+            except:
+                st.error("Erro ao ler JSON.")
 
     col_esq, col_dir = st.columns(2)
     with col_esq:
         aviao = db_avioes[st.selectbox("Aeronave", list(db_avioes.keys()))]
-        distancia_km = st.number_input("Distância (km)", value=float(dist_calc), disabled=usar_dados_importados)
-        velocidade_estimada = st.number_input("Velocidade (km/h)", value=float(vel_calc), disabled=usar_dados_importados)
+        distancia_km = st.number_input("Distância (km)", value=float(st.session_state.dist_calc), disabled=st.session_state.usar_dados_importados)
+        velocidade_estimada = st.number_input("Velocidade (km/h)", value=float(st.session_state.vel_calc), disabled=st.session_state.usar_dados_importados)
         margem_reserva = st.slider("Reserva (%)", 0, 150, 90)
 
     with col_dir:
@@ -170,7 +192,7 @@ with tab1:
         st.error(f"❌ SOBRECARGA: {peso_total:.0f} kg excede limite de {aviao['peso_max']} kg.")
 
 # ==========================================
-# ABA 2: LOTFE 7 E ABA 3: NAVLOG
+# ABA 2: LOTFE 7
 # ==========================================
 with tab2:
     b1, b2 = st.columns(2)
@@ -191,17 +213,80 @@ with tab2:
     st.metric("Insira na Lotfe: Velocidade Solo (GS)", f"{gs_kmh:.0f} km/h")
     st.metric("Insira na Lotfe: Ângulo de Deriva", f"{abs(deriva_graus):.1f}° {'Direita' if deriva_graus > 0 else 'Esquerda'}")
 
+# ==========================================
+# ABA 3: NAVLOG HÍBRIDO (Manual + E6B)
+# ==========================================
 with tab3:
-    if usar_dados_importados and len(coords) > 1:
-        navlog = []
-        for i in range(len(coords) - 1):
-            dx, dy = coords[i+1]['lng'] - coords[i]['lng'], coords[i+1]['lat'] - coords[i]['lat']
-            dist = math.hypot(dx, dy) * 3.0
-            tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
-            navlog.append({"Perna": f"WP{i}➔WP{i+1}", "Dist.": f"{dist:.1f} km", "Rumo (Mapa)": f"{tc_deg:.0f}°"})
-        st.table(navlog)
-    else:
-        st.info("Importe um Plano de Voo na Aba 1 para gerar o NavLog.")
+    st.subheader("🗺️ Diário de Navegação Híbrido")
+    st.markdown("Pode desenhar a rota importando um ficheiro na Aba 1, ou **editar/adicionar linhas manualmente** na tabela abaixo.")
+    
+    c_tas, c_dir, c_vel = st.columns(3)
+    with c_tas:
+        nav_tas = st.number_input("Sua TAS esperada (km/h)", value=float(st.session_state.vel_calc), step=10.0)
+    with c_dir:
+        nav_w_dir = st.number_input("Vento vindo DE (°)", value=float(st.session_state.vento_dir_cb), key="nav_dir_e6b")
+    with c_vel:
+        # A matemática de voo exige o vento em km/h, por isso fazemos a conversão do servidor aqui:
+        nav_w_spd = st.number_input("Vel. Vento (km/h)", value=float(st.session_state.vento_vel_cb * 3.6), step=5.0, key="nav_spd_e6b")
+
+    st.markdown("**1. Insira os dados da sua rota (Folha de Cálculo Interativa):**")
+    
+    # Esta é a folha de cálculo mágica onde o piloto pode escrever!
+    navlog_editado = st.data_editor(
+        st.session_state.navlog_manual, 
+        num_rows="dynamic", # Permite ao utilizador adicionar ou apagar linhas à vontade
+        use_container_width=True,
+        column_config={
+            "Perna": st.column_config.TextColumn("Nome da Perna (Ex: Base -> Depósito)"),
+            "Distância (km)": st.column_config.NumberColumn("Distância (km)", min_value=0.1, format="%.1f"),
+            "Rumo (TC)": st.column_config.NumberColumn("Rumo Verdadeiro (TC °)", min_value=0.0, max_value=360.0, format="%.0f")
+        }
+    )
+    
+    # Salva a edição para não apagar quando mudar de aba
+    st.session_state.navlog_manual = navlog_editado
+    
+    st.markdown("**2. Computador de Voo (A sua Bússola Compensada):**")
+    
+    # O motor E6B entra em ação a calcular tudo com base no que você escreveu na folha acima
+    if len(navlog_editado) > 0:
+        resultados_finais = []
+        for linha in navlog_editado:
+            try:
+                dist = float(linha.get("Distância (km)", 0.0))
+                tc_deg = float(linha.get("Rumo (TC)", 0.0))
+            except (ValueError, TypeError):
+                dist = 0.0
+                tc_deg = 0.0
+                
+            nome_perna = linha.get("Perna", "N/D")
+            
+            if dist > 0:
+                wa_rad = math.radians(nav_w_dir - tc_deg)
+                try:
+                    sin_wca = max(-1.0, min(1.0, (nav_w_spd * math.sin(wa_rad)) / nav_tas))
+                    wca_deg = math.degrees(math.asin(sin_wca))
+                except:
+                    wca_deg = 0.0
+
+                th_deg = (tc_deg + wca_deg + 360) % 360
+                gs_leg = (nav_tas * math.cos(math.radians(wca_deg))) - (nav_w_spd * math.cos(wa_rad))
+                gs_leg = max(1.0, gs_leg)
+                
+                tempo_min = (dist / gs_leg) * 60
+                
+                resultados_finais.append({
+                    "📍 Perna": nome_perna,
+                    "🗺️ Rumo Original": f"{tc_deg:.0f}°",
+                    "🧭 Voe nesta PROA": f"{th_deg:.0f}°",
+                    "💨 Vel. Solo (GS)": f"{gs_leg:.0f} km/h",
+                    "⏱️ Tempo Estimado": f"{tempo_min:.1f} min"
+                })
+        
+        if resultados_finais:
+            st.table(resultados_finais)
+        else:
+            st.caption("Insira uma distância válida na tabela acima para gerar os cálculos de Proa e Tempo.")
 
 # ==========================================
 # ABA 4: INTELIGÊNCIA GLOBAL E BRIEFINGS
@@ -211,17 +296,14 @@ with tab4:
     if st.session_state.dados_campanha:
         dados = st.session_state.dados_campanha
         
-        # --- NOVO BLOCO: BRIEFING DA CAMPANHA TRADUZIDO ---
         st.subheader("📜 Briefing do Comando (Traduzido)")
         
         texto_hoje = dados.get('CurrentDayStateDescription', '')
         texto_ontem = dados.get('PreviousDaysEventsDescription', '')
         
-        if texto_hoje:
-            st.info(traduzir_texto(texto_hoje))
+        if texto_hoje: st.info(traduzir_texto(texto_hoje))
         if texto_ontem:
-            with st.expander("Ver Resumo do Dia Anterior"):
-                st.write(traduzir_texto(texto_ontem))
+            with st.expander("Ver Resumo do Dia Anterior"): st.write(traduzir_texto(texto_ontem))
                 
         st.divider()
         
@@ -240,18 +322,8 @@ with tab4:
             objetivos = dados.get('Objectives', [])
             objetivos_ativos = [o for o in objetivos if o.get('ActiveToday') == True]
             for obj in objetivos_ativos[:6]:
-                # 1. Identificação visual da fação (Filtro Robusto)
-                # Convertir tudo para minúsculas e remover espaços extras
-                coalizao_ingles = str(obj.get('Coalition', '')).strip().lower()
-                
-                if coalizao_ingles in ['allied', 'allies']:
-                    icone = "🔵 Aliado"
-                elif coalizao_ingles == 'axis':
-                    icone = "🔴 Eixo"
-                else:
-                    icone = "⚪ Neutro"
-                
-                # Traduzimos o tipo de instalação (ex: Bridge, Factory)
+                coalizao = str(obj.get('Coalition', '')).strip().lower()
+                icone = "🔵 Aliado" if coalizao in ['allied', 'allies'] else "🔴 Eixo" if coalizao == 'axis' else "⚪ Neutro"
                 tipo_traduzido = traduzir_texto(obj.get('Type', 'Instalação'))
                 st.error(f"**{obj.get('Name', 'Alvo')}** ({tipo_traduzido}) - {icone}")
                 
@@ -265,20 +337,8 @@ with tab4:
                     avioes_base = dados_base.get('AvailableAirframes', [])
                     if avioes_base:
                         for av in avioes_base:
-                            # 2. Utilização do NOME TÉCNICO COMPLETO ('Type' em vez de 'ColloquialName')
-                            nome_completo_aviao = av.get('Type', 'Aeronave Desconhecida')
-                            st.write(f"- {nome_completo_aviao}: **{av.get('NumberAvailable', 0)}** unid.")
+                            st.write(f"- {av.get('Type', 'Aeronave')}: **{av.get('NumberAvailable', 0)}** unid.")
                     else:
-                        st.write("Sem aeronaves listadas nesta base.")
+                        st.write("Sem aeronaves listadas.")
     else:
         st.info("Aguardando sincronização automática com o servidor...")
-
-# ==========================================
-# ABA 5: DEBUG DA API
-# ==========================================
-with tab5:
-    st.header("🛠️ Inspecionar JSON Bruto")
-    if st.session_state.dados_campanha:
-        st.code(json.dumps(st.session_state.dados_campanha, indent=4), language="json")
-    else:
-        st.info("A API ainda não foi carregada.")
