@@ -73,6 +73,12 @@ db_avioes = {
         "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147, "Ambas": 193},
         "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "4x SC 250": 1000, "2x SC 1000": 2180}
     },
+    "He-111 H-16": {
+        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
+        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "4x SC 250": 1000, "8x SC 250": 2000, "2x SC 500": 1000, "2x SC 1800": 3560, "1x SC 2500": 2400}
+    },
     "Ju-52/3M": {
         "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
         "armamento_fixo": "Transporte",
