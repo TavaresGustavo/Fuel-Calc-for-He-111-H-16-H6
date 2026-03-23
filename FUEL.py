@@ -8,32 +8,44 @@ import re
 # 0. FUNÇÃO DA API (TELEMETRIA AO VIVO)
 # ==========================================
 def fetch_combatbox_data():
-    """Integração direta e invisível com a API JSON do Combat Box"""
+    """Integração direta e invisível com a API JSON do Combat Box (Com bypass anti-bot)"""
     try:
-        # A URL da API que o Gustavo encontrou!
         api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
         
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(api_url, headers=headers, timeout=5)
+        # Disfarce avançado (Spoofing) para passar pelos firewalls do servidor
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Referer': 'https://campaign.combatbox.net/'
+        }
         
-        # Converte a resposta oficial em um dicionário Python
-        dados_json = response.json()
+        response = requests.get(api_url, headers=headers, timeout=10)
         
-        # Transformamos o dicionário em texto minúsculo para garantir 
-        # que vamos achar os valores independentemente do nível da "árvore" JSON
+        # Verifica se fomos bloqueados pelo servidor (ex: erro 403 ou 404)
+        if response.status_code != 200:
+            st.session_state.status_cb = f"❌ O servidor recusou acesso (Erro HTTP {response.status_code})."
+            return
+            
+        # Tenta ler o JSON. Se o site devolver HTML/Cloudflare, cai no except.
+        try:
+            dados_json = response.json()
+        except ValueError:
+            st.session_state.status_cb = "❌ O servidor bloqueou o acesso aos dados (devolveu HTML em vez de JSON)."
+            return
+        
+        # Guardamos os dados globais para a nova Aba de Inteligência usar
+        st.session_state.dados_campanha = dados_json
+        
         texto_json = json.dumps(dados_json).lower()
         
-        # Busca blindada usando Regex direto nos valores do JSON
         temp_match = re.search(r'"temperature"\s*:\s*(-?[\d\.]+)', texto_json)
         vento_match = re.search(r'"windspeed"\s*:\s*([\d\.]+)', texto_json)
         dir_match = re.search(r'"winddirection"\s*:\s*([\d\.]+)', texto_json)
         
-        # Plano B (Fallbacks) caso o desenvolvedor deles mude o nome da variável no futuro
         if not vento_match: vento_match = re.search(r'"wind_speed"\s*:\s*([\d\.]+)', texto_json)
         if not dir_match: dir_match = re.search(r'"wind_direction"\s*:\s*([\d\.]+)', texto_json)
         if not dir_match: dir_match = re.search(r'"winddir"\s*:\s*([\d\.]+)', texto_json)
         
-        # Se encontrou a trindade da navegação, injeta na calculadora!
         if temp_match and vento_match and dir_match:
             st.session_state.temp_cb = float(temp_match.group(1))
             st.session_state.vento_vel_cb = float(vento_match.group(1))
@@ -42,8 +54,10 @@ def fetch_combatbox_data():
         else:
             st.session_state.status_cb = "⚠️ JSON recebido, mas variáveis de clima ausentes."
             
+    except requests.exceptions.Timeout:
+        st.session_state.status_cb = "❌ O servidor demorou muito a responder (Timeout)."
     except Exception as e:
-        st.session_state.status_cb = f"❌ Falha de Conexão: {e}"
+        st.session_state.status_cb = f"❌ Erro de Sistema: {e}"
 
 # ==========================================
 # BARRA LATERAL (SIDEBAR) - VISUAL
