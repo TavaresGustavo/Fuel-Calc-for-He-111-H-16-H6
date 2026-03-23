@@ -240,9 +240,16 @@ with tab4:
             objetivos = dados.get('Objectives', [])
             objetivos_ativos = [o for o in objetivos if o.get('ActiveToday') == True]
             for obj in objetivos_ativos[:6]:
-                # 1. Identificação visual da facção (Aliados vs Eixo)
-                coalizao_ingles = obj.get('Coalition', 'Desconhecida')
-                icone = "🔵 Aliado" if coalizao_ingles == "Allied" else "🔴 Eixo" if coalizao_ingles == "Axis" else "⚪ Neutro"
+                # 1. Identificação visual da fação (Filtro Robusto)
+                # Convertir tudo para minúsculas e remover espaços extras
+                coalizao_ingles = str(obj.get('Coalition', '')).strip().lower()
+                
+                if coalizao_ingles in ['allied', 'allies']:
+                    icone = "🔵 Aliado"
+                elif coalizao_ingles == 'axis':
+                    icone = "🔴 Eixo"
+                else:
+                    icone = "⚪ Neutro"
                 
                 # Traduzimos o tipo de instalação (ex: Bridge, Factory)
                 tipo_traduzido = traduzir_texto(obj.get('Type', 'Instalação'))
