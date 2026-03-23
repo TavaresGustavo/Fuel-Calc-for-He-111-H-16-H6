@@ -4,44 +4,64 @@ import math
 import requests
 import re
 
+==========================================
+# 0. FUNÇÃO DA API (TELEMETRIA AO VIVO)
 # ==========================================
-# 0. ESTADO DE SESSÃO (TELEMETRIA AO VIVO)
-# ==========================================
-if 'vento_vel_cb' not in st.session_state:
-    st.session_state.vento_vel_cb = 5.0
-if 'vento_dir_cb' not in st.session_state:
-    st.session_state.vento_dir_cb = 45.0
-if 'temp_cb' not in st.session_state:
-    st.session_state.temp_cb = 15.0
-if 'status_cb' not in st.session_state:
-    st.session_state.status_cb = "A aguardar sincronização..."
-
 def fetch_combatbox_data():
-    """Função para extrair telemetria real do Combat Box via Web Scraping"""
+    """Integração direta e invisível com a API JSON do Combat Box"""
     try:
-        # Acessar a página de campanha do Combat Box
+        # A URL da API que o Gustavo encontrou!
+        api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
+        
         headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get("https://campaign.combatbox.net/", headers=headers, timeout=5)
-        html = response.text
+        response = requests.get(api_url, headers=headers, timeout=5)
         
-        # Caçador de Padrões (Regex) para varrer o HTML do site
-        # Ele procura as palavras exatas e extrai apenas os números (mesmo que sejam negativos)
-        vento_match = re.search(r"Wind:\s*([\d\.]+)\s*m/s", html)
-        dir_match = re.search(r"m/s\s*at\s*(\d{1,3})", html)
-        temp_match = re.search(r"Temperature:\s*(-?[\d\.]+)", html)
+        # Converte a resposta oficial em um dicionário Python
+        dados_json = response.json()
         
-        if vento_match and dir_match and temp_match:
-            # Se encontrou os padrões, atualiza a memória com os dados REAIS
+        # Transformamos o dicionário em texto minúsculo para garantir 
+        # que vamos achar os valores independentemente do nível da "árvore" JSON
+        texto_json = json.dumps(dados_json).lower()
+        
+        # Busca blindada usando Regex direto nos valores do JSON
+        temp_match = re.search(r'"temperature"\s*:\s*(-?[\d\.]+)', texto_json)
+        vento_match = re.search(r'"windspeed"\s*:\s*([\d\.]+)', texto_json)
+        dir_match = re.search(r'"winddirection"\s*:\s*([\d\.]+)', texto_json)
+        
+        # Plano B (Fallbacks) caso o desenvolvedor deles mude o nome da variável no futuro
+        if not vento_match: vento_match = re.search(r'"wind_speed"\s*:\s*([\d\.]+)', texto_json)
+        if not dir_match: dir_match = re.search(r'"wind_direction"\s*:\s*([\d\.]+)', texto_json)
+        if not dir_match: dir_match = re.search(r'"winddir"\s*:\s*([\d\.]+)', texto_json)
+        
+        # Se encontrou a trindade da navegação, injeta na calculadora!
+        if temp_match and vento_match and dir_match:
+            st.session_state.temp_cb = float(temp_match.group(1))
             st.session_state.vento_vel_cb = float(vento_match.group(1))
             st.session_state.vento_dir_cb = float(dir_match.group(1))
-            st.session_state.temp_cb = float(temp_match.group(1))
-            st.session_state.status_cb = "✅ Ligação estabelecida! Telemetria AO VIVO recebida."
+            st.session_state.status_cb = "✅ API Sincronizada! Telemetria AO VIVO."
         else:
-            # Se o servidor mudar o layout do texto no futuro, ele avisa
-            st.session_state.status_cb = "⚠️ Ligado ao site, mas os padrões de texto mudaram."
+            st.session_state.status_cb = "⚠️ JSON recebido, mas variáveis de clima ausentes."
             
     except Exception as e:
-        st.session_state.status_cb = f"❌ Erro na ligação ao servidor: {e}"
+        st.session_state.status_cb = f"❌ Falha de Conexão: {e}"
+
+# ==========================================
+# BARRA LATERAL (SIDEBAR) - VISUAL
+# ==========================================
+with st.sidebar:
+    st.header("📡 Telemetria do Servidor")
+    st.image("https://combatbox.net/static/img/combatbox_logo.png", width=200)
+    st.markdown("Sincroniza a meteorologia da API do Combat Box com a calculadora.")
+    
+    if st.button("🔄 Puxar Dados (Combat Box)"):
+        fetch_combatbox_data()
+        
+    st.caption(st.session_state.status_cb)
+    st.divider()
+    
+    st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
+    st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
+    st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
 # ==========================================
 # 1. BASE DE DADOS: Pesos e Aeronaves
 # ==========================================
@@ -138,7 +158,7 @@ with st.sidebar:
 
 
 st.title("🛩️ Painel Tático de Voo")
-tab1, tab2, tab3 = st.tabs(["📊 Planeamento e Hangar", "🎯 Mira Lotfe 7", "🧮 Computador E6B (NavLog)"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Planejamento e Hangar", "🎯 Mira Lotfe 7", "🧮 Computador E6B", "🌐 Inteligência (Combat Box)"])
 
 # ==========================================
 # 3. SEPARADOR 1: HANGAR E COMBUSTÍVEL
@@ -342,3 +362,91 @@ with tab3:
         peso_input = st.number_input("Peso / Volume", value=100.0)
         st.caption(f"**{peso_input} kg** = {peso_input * 2.20462:.0f} lbs")
         st.caption(f"**{peso_input} galões** = {peso_input * 3.78541:.1f} litros")
+
+# ==========================================
+# 6. SEPARADOR 4: INTELIGÊNCIA E RADAR (C4ISR)
+# ==========================================
+with tab4:
+    st.header("🌐 Painel de Inteligência Global")
+    st.markdown("Análise de telemetria avançada, logística e alvos ativos extraídos do servidor.")
+    
+    if st.button("📡 Atualizar Radar & Logística", key="btn_radar"):
+        # Fazemos um request direto ao JSON completo da campanha
+        try:
+            api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
+            response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
+            st.session_state.dados_campanha = response.json()
+            st.success("✅ Banco de dados tático atualizado!")
+        except Exception as e:
+            st.error(f"❌ Erro ao ligar ao servidor de campanha: {e}")
+
+    st.divider()
+
+    # Se já tivermos o JSON carregado na memória, começamos a mineração de dados
+    if 'dados_campanha' in st.session_state and st.session_state.dados_campanha:
+        dados = st.session_state.dados_campanha
+        
+        col_w, col_t = st.columns([1, 2])
+        
+        # --- BLOCO METEOROLÓGICO AVANÇADO ---
+        with col_w:
+            st.subheader("⛅ Meteorologia")
+            # Procura dados de nuvens e clima dentro do JSON
+            # Nota: As chaves exatas (ex: 'Weather', 'Clouds') dependem da estrutura do Combat Box
+            clima = dados.get('Weather', {}) 
+            if not clima:
+                # Fallback caso a chave tenha outro nome na raiz do JSON
+                clima = dados
+                
+            nuvens_base = clima.get('CloudBase', 'N/D')
+            pressao = clima.get('Pressure', 'N/D')
+            
+            st.metric("Base das Nuvens (Teto)", f"{nuvens_base} m")
+            st.metric("Pressão (QNH)", f"{pressao} mmHg")
+            
+            st.markdown("**Vento em Altitude:**")
+            st.info("A aguardar mapeamento de camadas...") # Expandiremos se o JSON tiver array de ventos
+            
+        # --- BLOCO DE ALVOS ATIVOS ---
+        with col_t:
+            st.subheader("🎯 Alvos Estratégicos (Ativos)")
+            alvos = dados.get('Targets', [])
+            alvos_ativos = [t for t in alvos if t.get('Status') != 'Destroyed']
+            
+            if alvos_ativos:
+                for alvo in alvos_ativos[:5]: # Mostra os 5 primeiros para não poluir
+                    nome = alvo.get('Name', 'Alvo Desconhecido')
+                    tipo = alvo.get('Type', 'Instalação')
+                    st.warning(f"**{nome}** ({tipo}) - Status: Operacional")
+            else:
+                st.caption("A processar a lista de alvos da base de dados. Pressione Atualizar.")
+                
+        st.divider()
+        
+        # --- BLOCO DE LOGÍSTICA (AERÓDROMOS) ---
+        st.subheader("🛫 Logística de Base")
+        aerodromos = dados.get('Airfields', [])
+        
+        if aerodromos:
+            nomes_bases = [a.get('Name', 'Base S/N') for a in aerodromos]
+            base_selecionada = st.selectbox("Selecione um Aeródromo para inspecionar:", nomes_bases)
+            
+            # Filtra o aeródromo selecionado
+            base_dados = next((a for a in aerodromos if a.get('Name') == base_selecionada), None)
+            
+            if base_dados:
+                st.markdown(f"**Facção:** {base_dados.get('Coalition', 'Desconhecida')}")
+                avioes = base_dados.get('Aircraft', [])
+                if avioes:
+                    st.write("Aeronaves Disponíveis no Hangar:")
+                    # Cria colunas dinâmicas para listar os aviões
+                    cols = st.columns(3)
+                    for i, aviao in enumerate(avioes):
+                        cols[i % 3].metric(aviao.get('Type', 'Aeronave'), f"{aviao.get('Count', 0)} unid.")
+                else:
+                    st.caption("Sem dados de estoque para esta base.")
+        else:
+            st.caption("Estrutura de aeródromos a aguardar mapeamento exato das chaves do JSON.")
+
+    else:
+        st.info("Pressione o botão acima para extrair o banco de dados do servidor.")
