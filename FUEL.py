@@ -17,32 +17,31 @@ if 'status_cb' not in st.session_state:
     st.session_state.status_cb = "A aguardar sincronização..."
 
 def fetch_combatbox_data():
-    """Função para extrair telemetria do Combat Box via Web Scraping / API"""
+    """Função para extrair telemetria real do Combat Box via Web Scraping"""
     try:
-        # Aceder à página de campanha do Combat Box
+        # Acessar a página de campanha do Combat Box
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get("https://campaign.combatbox.net/", headers=headers, timeout=5)
         html = response.text
         
-        # Como as APIs ocultas mudam, utilizamos Regex (Expressões Regulares) 
-        # para caçar padrões de vento e temperatura no código da página deles.
-        # Exemplo de caça a padrões (podes precisar de ajustar conforme a estrutura exata do HTML deles)
+        # Caçador de Padrões (Regex) para varrer o HTML do site
+        # Ele procura as palavras exatas e extrai apenas os números (mesmo que sejam negativos)
+        vento_match = re.search(r"Wind:\s*([\d\.]+)\s*m/s", html)
+        dir_match = re.search(r"m/s\s*at\s*(\d{1,3})", html)
+        temp_match = re.search(r"Temperature:\s*(-?[\d\.]+)", html)
         
-        # Placeholder de extração bem-sucedida para o nosso sistema:
-        # (Se encontrares a API JSON deles (ex: state.json), basta usar response.json() aqui)
-        vento_match = 6.0  # Exemplo: extraído do site (m/s)
-        dir_match = 270.0  # Exemplo: extraído do site (Graus)
-        temp_match = 22.0  # Exemplo: extraído do site (Celsius)
-        
-        # Atualiza a memória da calculadora
-        st.session_state.vento_vel_cb = float(vento_match)
-        st.session_state.vento_dir_cb = float(dir_match)
-        st.session_state.temp_cb = float(temp_match)
-        st.session_state.status_cb = "✅ Ligação estabelecida! Dados recebidos."
-        
+        if vento_match and dir_match and temp_match:
+            # Se encontrou os padrões, atualiza a memória com os dados REAIS
+            st.session_state.vento_vel_cb = float(vento_match.group(1))
+            st.session_state.vento_dir_cb = float(dir_match.group(1))
+            st.session_state.temp_cb = float(temp_match.group(1))
+            st.session_state.status_cb = "✅ Ligação estabelecida! Telemetria AO VIVO recebida."
+        else:
+            # Se o servidor mudar o layout do texto no futuro, ele avisa
+            st.session_state.status_cb = "⚠️ Ligado ao site, mas os padrões de texto mudaram."
+            
     except Exception as e:
         st.session_state.status_cb = f"❌ Erro na ligação ao servidor: {e}"
-
 # ==========================================
 # 1. BASE DE DADOS: Pesos e Aeronaves
 # ==========================================
