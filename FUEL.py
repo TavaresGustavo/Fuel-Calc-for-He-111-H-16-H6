@@ -4,7 +4,7 @@ import math
 import requests
 import re
 
-==========================================
+#==========================================
 # 0. FUNÇÃO DA API (TELEMETRIA AO VIVO)
 # ==========================================
 def fetch_combatbox_data():
