@@ -11,9 +11,10 @@ peso_bombas = {
     "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400  
 }
 
+# 2. Banco de Dados Oficial: Aeronaves (PESOS CORRIGIDOS)
 db_avioes = {
     "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500,
+        "peso_base_sem_combustivel": 9500, # Peso vazio + tripulação + óleo (sem combustível)
         "peso_max": 14000, 
         "consumo_l_min": 10.5,
         "vel_cruzeiro_padrao": 320, 
@@ -69,7 +70,7 @@ db_avioes = {
         }
     },
     "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500,
+        "peso_base_sem_combustivel": 7500, 
         "peso_max": 11000, 
         "consumo_l_min": 12.0,  
         "vel_cruzeiro_padrao": 240, 
@@ -86,6 +87,38 @@ db_avioes = {
         "presets_bombas": {
             "№0: Empty (Sem Drop Containers)": 0,
             "№2: 10 x MAB 250 containers": 2550
+        }
+    },
+    "Ju-88 A-4": {
+        "peso_base_sem_combustivel": 8600, # Vazio (8047kg) + Tripulação + Óleo
+        "peso_max": 14000, 
+        "consumo_l_min": 10.0,  # Estimativa para 2x Jumo 211J
+        "vel_cruzeiro_padrao": 370, # Mais rápido que o He-111
+        "tanque_max_l": 1680,   
+        "armamento_fixo": "1x 13mm MG-131 | 4x 7.92mm MG-81/81Z",
+        "modificacoes": {
+            "Padrão": 0,
+            "Remove dive brakes (-60 kg)": -60,
+            "Armor plates for gunner (+20 kg)": 20,
+            "Remove lower gunner and gondola (-123 kg)": -123,
+            "Remove lower gunner, gondola and dive brakes (-183 kg)": -183
+        },
+        "presets_bombas": {
+            "Empty (Sem Bombas)": 0,
+            "10 x SC 50": 10 * peso_bombas["SC 50"],
+            "10 x SC 50 + 4 x SC 250": (10 * peso_bombas["SC 50"]) + (4 * peso_bombas["SC 250"]),
+            "28 x SC 50": 28 * peso_bombas["SC 50"],
+            "28 x SC 50 + 4 x SC 250": (28 * peso_bombas["SC 50"]) + (4 * peso_bombas["SC 250"]),
+            "4 x SC 250": 4 * peso_bombas["SC 250"],
+            "2 x SC 500": 2 * peso_bombas["SC 500"],
+            "4 x SC 500": 4 * peso_bombas["SC 500"],
+            "6 x SC 500": 6 * peso_bombas["SC 500"],
+            "2 x SC 1000": 2 * peso_bombas["SC 1000"],
+            "2 x SC 1000 + 2 x SC 250": (2 * peso_bombas["SC 1000"]) + (2 * peso_bombas["SC 250"]),
+            "2 x SC 1000 + 2 x SC 500": (2 * peso_bombas["SC 1000"]) + (2 * peso_bombas["SC 500"]),
+            "2 x SC 1800": 2 * peso_bombas["SC 1800"],
+            "1 x SC 1800 + 3 x SC 250": peso_bombas["SC 1800"] + (3 * peso_bombas["SC 250"]),
+            "1 x SC 1800 + 3 x SC 500": peso_bombas["SC 1800"] + (3 * peso_bombas["SC 500"])
         }
     }
 }
