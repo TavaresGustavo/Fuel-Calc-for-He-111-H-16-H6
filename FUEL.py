@@ -4,6 +4,18 @@ import math
 import requests
 import re
 
+# ==========================================
+# 0. INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE)
+# ==========================================
+if 'vento_vel_cb' not in st.session_state:
+    st.session_state.vento_vel_cb = 5.0
+if 'vento_dir_cb' not in st.session_state:
+    st.session_state.vento_dir_cb = 45.0
+if 'temp_cb' not in st.session_state:
+    st.session_state.temp_cb = 15.0
+if 'status_cb' not in st.session_state:
+    st.session_state.status_cb = "A aguardar sincronização..."
+
 #==========================================
 # 0. FUNÇÃO DA API (TELEMETRIA AO VIVO)
 # ==========================================
