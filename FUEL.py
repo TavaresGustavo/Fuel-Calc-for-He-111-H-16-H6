@@ -3,17 +3,16 @@ import json
 import math
 import requests
 import time
+from deep_translator import GoogleTranslator
 
 # ==========================================
 # 0. INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE)
 # ==========================================
-# Variáveis de HOJE (Alimentam a Lotfe 7)
 if 'vento_vel_cb' not in st.session_state: st.session_state.vento_vel_cb = 5.0
 if 'vento_dir_cb' not in st.session_state: st.session_state.vento_dir_cb = 45.0
 if 'temp_cb' not in st.session_state: st.session_state.temp_cb = 15.0
 if 'nuvens_hoje_cb' not in st.session_state: st.session_state.nuvens_hoje_cb = "Desconhecido"
 
-# Variáveis de AMANHÃ (Previsão)
 if 'vento_vel_amanha_cb' not in st.session_state: st.session_state.vento_vel_amanha_cb = 5.0
 if 'vento_dir_amanha_cb' not in st.session_state: st.session_state.vento_dir_amanha_cb = 45.0
 if 'temp_amanha_cb' not in st.session_state: st.session_state.temp_amanha_cb = 15.0
@@ -23,8 +22,19 @@ if 'status_cb' not in st.session_state: st.session_state.status_cb = "A aguardar
 if 'dados_campanha' not in st.session_state: st.session_state.dados_campanha = None
 
 # ==========================================
-# 1. FUNÇÃO DA API JSON (SEPARAÇÃO HOJE/AMANHÃ)
+# 1. FUNÇÕES DA API E TRADUÇÃO
 # ==========================================
+@st.cache_data(ttl=3600) # Guarda a tradução na memória por 1 hora para não travar o app
+def traduzir_texto(texto):
+    if not texto or texto.strip() == "":
+        return ""
+    try:
+        # O motor do Google geralmente preserva nomes próprios (cidades e aeronaves) automaticamente
+        tradutor = GoogleTranslator(source='en', target='pt')
+        return tradutor.translate(texto)
+    except Exception:
+        return texto # Se o tradutor falhar, mostra em inglês para não dar erro
+
 def fetch_combatbox_data():
     """Extrai os dados da missão atual e a previsão do dia seguinte"""
     try:
@@ -38,19 +48,15 @@ def fetch_combatbox_data():
         dados_json = response.json()
         st.session_state.dados_campanha = dados_json 
         
-        # 1. Extração do Clima de HOJE (Atual)
         weather_hoje = dados_json.get("Weather", {})
         wind_hoje = weather_hoje.get("WindAtGroundLevel", {})
-        
         st.session_state.temp_cb = float(weather_hoje.get("Temperature", 15.0))
         st.session_state.vento_vel_cb = float(wind_hoje.get("Speed", 5.0))
         st.session_state.vento_dir_cb = float(wind_hoje.get("Bearing", 45.0))
         st.session_state.nuvens_hoje_cb = weather_hoje.get("CloudDescription", "N/D")
 
-        # 2. Extração do Clima de AMANHÃ (Previsão)
         weather_amanha = dados_json.get("WeatherTomorrow", {})
         wind_amanha = weather_amanha.get("WindAtGroundLevel", {})
-        
         st.session_state.temp_amanha_cb = float(weather_amanha.get("Temperature", 15.0))
         st.session_state.vento_vel_amanha_cb = float(wind_amanha.get("Speed", 5.0))
         st.session_state.vento_dir_amanha_cb = float(wind_amanha.get("Bearing", 45.0))
@@ -94,7 +100,7 @@ db_avioes = {
 }
 
 # ==========================================
-# 3. INTERFACE E BARRA LATERAL (AUTO-REFRESH)
+# 3. INTERFACE E BARRA LATERAL
 # ==========================================
 st.set_page_config(page_title="Painel Tático", layout="wide")
 st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
@@ -173,7 +179,6 @@ with tab2:
         ias = st.number_input("IAS (km/h)", value=280)
         proa_alvo = st.number_input("Proa (°)", value=90)
     with b2:
-        # Puxa automaticamente o clima de HOJE!
         vel_vento = st.number_input("Vel. Vento (m/s)", value=float(st.session_state.vento_vel_cb))
         dir_vento = st.number_input("Dir. Vento (°)", value=float(st.session_state.vento_dir_cb))
 
@@ -199,22 +204,34 @@ with tab3:
         st.info("Importe um Plano de Voo na Aba 1 para gerar o NavLog.")
 
 # ==========================================
-# ABA 4: INTELIGÊNCIA GLOBAL (C4ISR)
+# ABA 4: INTELIGÊNCIA GLOBAL E BRIEFINGS
 # ==========================================
 with tab4:
     st.header("🌐 Inteligência Tática e Logística")
     if st.session_state.dados_campanha:
         dados = st.session_state.dados_campanha
         
+        # --- NOVO BLOCO: BRIEFING DA CAMPANHA TRADUZIDO ---
+        st.subheader("📜 Briefing do Comando (Traduzido)")
+        
+        texto_hoje = dados.get('CurrentDayStateDescription', '')
+        texto_ontem = dados.get('PreviousDaysEventsDescription', '')
+        
+        if texto_hoje:
+            st.info(traduzir_texto(texto_hoje))
+        if texto_ontem:
+            with st.expander("Ver Resumo do Dia Anterior"):
+                st.write(traduzir_texto(texto_ontem))
+                
+        st.divider()
+        
         st.subheader("⛅ Quadro Meteorológico")
         c_hoje, c_amanha = st.columns(2)
-        
         with c_hoje:
-            st.info(f"**MISSÃO ATUAL (HOJE)**\n\nNuvens: {st.session_state.nuvens_hoje_cb}\n\nTemp: {st.session_state.temp_cb} °C | Vento: {st.session_state.vento_vel_cb} m/s a {st.session_state.vento_dir_cb}°")
+            st.info(f"**MISSÃO ATUAL (HOJE)**\n\nNuvens: {traduzir_texto(st.session_state.nuvens_hoje_cb)}\n\nTemp: {st.session_state.temp_cb} °C | Vento: {st.session_state.vento_vel_cb} m/s a {st.session_state.vento_dir_cb}°")
         with c_amanha:
-            st.warning(f"**PRÓXIMA MISSÃO (AMANHÃ)**\n\nNuvens: {st.session_state.nuvens_amanha_cb}\n\nTemp: {st.session_state.temp_amanha_cb} °C | Vento: {st.session_state.vento_vel_amanha_cb} m/s a {st.session_state.vento_dir_amanha_cb}°")
+            st.warning(f"**PRÓXIMA MISSÃO (AMANHÃ)**\n\nNuvens: {traduzir_texto(st.session_state.nuvens_amanha_cb)}\n\nTemp: {st.session_state.temp_amanha_cb} °C | Vento: {st.session_state.vento_vel_amanha_cb} m/s a {st.session_state.vento_dir_amanha_cb}°")
             
-        st.caption(f"Situação da Guerra: {dados.get('CurrentDayStateDescription', 'Não informada.')}")
         st.divider()
         
         col_t, col_b = st.columns([1, 1])
@@ -223,7 +240,13 @@ with tab4:
             objetivos = dados.get('Objectives', [])
             objetivos_ativos = [o for o in objetivos if o.get('ActiveToday') == True]
             for obj in objetivos_ativos[:6]:
-                st.error(f"**{obj.get('Name', 'Alvo')}** ({obj.get('Type', 'Instalação')})")
+                # 1. Identificação visual da facção (Aliados vs Eixo)
+                coalizao_ingles = obj.get('Coalition', 'Desconhecida')
+                icone = "🔵 Aliado" if coalizao_ingles == "Allied" else "🔴 Eixo" if coalizao_ingles == "Axis" else "⚪ Neutro"
+                
+                # Traduzimos o tipo de instalação (ex: Bridge, Factory)
+                tipo_traduzido = traduzir_texto(obj.get('Type', 'Instalação'))
+                st.error(f"**{obj.get('Name', 'Alvo')}** ({tipo_traduzido}) - {icone}")
                 
         with col_b:
             st.subheader("🛫 Logística de Base")
@@ -235,9 +258,11 @@ with tab4:
                     avioes_base = dados_base.get('AvailableAirframes', [])
                     if avioes_base:
                         for av in avioes_base:
-                            st.write(f"- {av.get('ColloquialName', av.get('Type', 'Aeronave'))}: **{av.get('NumberAvailable', 0)}** unid.")
+                            # 2. Utilização do NOME TÉCNICO COMPLETO ('Type' em vez de 'ColloquialName')
+                            nome_completo_aviao = av.get('Type', 'Aeronave Desconhecida')
+                            st.write(f"- {nome_completo_aviao}: **{av.get('NumberAvailable', 0)}** unid.")
                     else:
-                        st.write("Sem aeronaves listadas.")
+                        st.write("Sem aeronaves listadas nesta base.")
     else:
         st.info("Aguardando sincronização automática com o servidor...")
 
