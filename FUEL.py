@@ -79,7 +79,7 @@ with st.sidebar:
     st.image("https://combatbox.net/static/img/combatbox_logo.png", width=200)
     st.markdown("Sincroniza a meteorologia da API do Combat Box com a calculadora.")
     
-    if st.button("🔄 Puxar Dados (Combat Box)"):
+    if st.button("🔄 Puxar Dados (Combat Box)", key="botao_radar_principal"):
         fetch_combatbox_data()
         
     st.caption(st.session_state.status_cb)
