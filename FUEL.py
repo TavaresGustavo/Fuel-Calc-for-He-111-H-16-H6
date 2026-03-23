@@ -17,9 +17,11 @@ if 'status_cb' not in st.session_state:
     st.session_state.status_cb = "A aguardar sincronização com o servidor..."
 if 'dados_campanha' not in st.session_state:
     st.session_state.dados_campanha = None
+if 'debug_json' not in st.session_state:
+    st.session_state.debug_json = None
 
 # ==========================================
-# 1. FUNÇÃO DA API JSON (O SEU ACHADO!)
+# 1. FUNÇÃO DA API JSON (BLINDADA)
 # ==========================================
 def fetch_combatbox_data():
     """Integração direta com o JSON da Campanha Rhineland"""
@@ -34,26 +36,29 @@ def fetch_combatbox_data():
             return
             
         dados_json = response.json()
-        st.session_state.dados_campanha = dados_json # Salva para a Aba de Inteligência
+        st.session_state.dados_campanha = dados_json 
         
-        # Converte tudo para texto para garantir a extração cega
         texto_json = json.dumps(dados_json).lower()
         
-        temp_match = re.search(r'"temperature"\s*:\s*(-?[\d\.]+)', texto_json)
-        vento_match = re.search(r'"windspeed"\s*:\s*([\d\.]+)', texto_json)
-        dir_match = re.search(r'"winddirection"\s*:\s*([\d\.]+)', texto_json)
+        # Regex melhorado: O "? faz com que ele aceite os números com ou sem aspas
+        temp_match = re.search(r'"temperature"\s*:\s*"?(-?[\d\.]+)"?', texto_json)
+        vento_match = re.search(r'"windspeed"\s*:\s*"?([\d\.]+)"?', texto_json)
+        dir_match = re.search(r'"winddirection"\s*:\s*"?([\d\.]+)"?', texto_json)
         
-        # Fallbacks
-        if not vento_match: vento_match = re.search(r'"wind_speed"\s*:\s*([\d\.]+)', texto_json)
-        if not dir_match: dir_match = re.search(r'"wind_direction"\s*:\s*([\d\.]+)', texto_json)
+        # Fallbacks (se eles usarem nomes abreviados)
+        if not temp_match: temp_match = re.search(r'"temp"\s*:\s*"?(-?[\d\.]+)"?', texto_json)
+        if not vento_match: vento_match = re.search(r'"wind_speed"\s*:\s*"?([\d\.]+)"?', texto_json)
+        if not dir_match: dir_match = re.search(r'"wind_direction"\s*:\s*"?([\d\.]+)"?', texto_json)
         
         if temp_match and vento_match and dir_match:
             st.session_state.temp_cb = float(temp_match.group(1))
             st.session_state.vento_vel_cb = float(vento_match.group(1))
             st.session_state.vento_dir_cb = float(dir_match.group(1))
             st.session_state.status_cb = "✅ API Sincronizada! Telemetria Tática AO VIVO."
+            st.session_state.debug_json = None # Esconde o debug se der certo
         else:
-            st.session_state.status_cb = "⚠️ JSON lido, mas a meteorologia está oculta."
+            st.session_state.status_cb = "⚠️ JSON lido, mas a meteorologia tem nomes diferentes."
+            st.session_state.debug_json = dados_json # Ativa o inspetor na tela!
             
     except Exception as e:
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
@@ -97,7 +102,6 @@ with st.sidebar:
     st.header("📡 Comando e Controlo")
     st.markdown("Sincroniza a calculadora com a base de dados oficial do Combat Box.")
     
-    # APENAS UM BOTÃO DE SINCRONIZAÇÃO AQUI
     if st.button("🔄 Puxar Dados do Servidor", use_container_width=True):
         fetch_combatbox_data()
         
@@ -106,6 +110,12 @@ with st.sidebar:
     st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
     st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
     st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
+    
+    # MODO DEBUG: Se a extração falhar, ele mostra o JSON para nós investigarmos
+    if st.session_state.debug_json:
+        with st.expander("🔍 Inspecionar Banco de Dados (Modo Debug)"):
+            st.json(st.session_state.debug_json)
+            st.caption("A resposta da API está aqui. Procure por pastas como 'Weather', 'Conditions' ou algo parecido.")
 
 st.title("🛩️ Painel Tático C4ISR")
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog E6B", "🌐 Radar de Inteligência"])
