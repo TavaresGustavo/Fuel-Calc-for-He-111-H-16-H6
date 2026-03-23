@@ -2,27 +2,34 @@ import streamlit as st
 import json
 import math
 import requests
-import time 
+import time
 
 # ==========================================
 # 0. INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE)
 # ==========================================
+# Variáveis de HOJE (Alimentam a Lotfe 7)
 if 'vento_vel_cb' not in st.session_state: st.session_state.vento_vel_cb = 5.0
 if 'vento_dir_cb' not in st.session_state: st.session_state.vento_dir_cb = 45.0
 if 'temp_cb' not in st.session_state: st.session_state.temp_cb = 15.0
-if 'status_cb' not in st.session_state: st.session_state.status_cb = "A aguardar sincronização com o servidor..."
+if 'nuvens_hoje_cb' not in st.session_state: st.session_state.nuvens_hoje_cb = "Desconhecido"
+
+# Variáveis de AMANHÃ (Previsão)
+if 'vento_vel_amanha_cb' not in st.session_state: st.session_state.vento_vel_amanha_cb = 5.0
+if 'vento_dir_amanha_cb' not in st.session_state: st.session_state.vento_dir_amanha_cb = 45.0
+if 'temp_amanha_cb' not in st.session_state: st.session_state.temp_amanha_cb = 15.0
+if 'nuvens_amanha_cb' not in st.session_state: st.session_state.nuvens_amanha_cb = "Desconhecido"
+
+if 'status_cb' not in st.session_state: st.session_state.status_cb = "A aguardar sincronização..."
 if 'dados_campanha' not in st.session_state: st.session_state.dados_campanha = None
 
 # ==========================================
-# 1. FUNÇÃO DA API JSON (EXTRAÇÃO NATIVA)
+# 1. FUNÇÃO DA API JSON (SEPARAÇÃO HOJE/AMANHÃ)
 # ==========================================
 def fetch_combatbox_data():
-    """Integração direta baseada no mapeamento exato do banco de dados"""
+    """Extrai os dados da missão atual e a previsão do dia seguinte"""
     try:
         api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        
-        response = requests.get(api_url, headers=headers, timeout=8)
+        response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
         
         if response.status_code != 200:
             st.session_state.status_cb = f"❌ Erro HTTP {response.status_code}"
@@ -31,17 +38,25 @@ def fetch_combatbox_data():
         dados_json = response.json()
         st.session_state.dados_campanha = dados_json 
         
-        # Navegação exata pela árvore do JSON que o Gustavo mapeou!
-        weather = dados_json.get("Weather", {})
-        wind = weather.get("WindAtGroundLevel", {})
+        # 1. Extração do Clima de HOJE (Atual)
+        weather_hoje = dados_json.get("Weather", {})
+        wind_hoje = weather_hoje.get("WindAtGroundLevel", {})
         
-        if weather and wind:
-            st.session_state.temp_cb = float(weather.get("Temperature", 15.0))
-            st.session_state.vento_vel_cb = float(wind.get("Speed", 5.0))
-            st.session_state.vento_dir_cb = float(wind.get("Bearing", 45.0))
-            st.session_state.status_cb = "✅ API Sincronizada! Telemetria Tática AO VIVO."
-        else:
-            st.session_state.status_cb = "⚠️ JSON lido, mas a aba 'Weather' não foi encontrada."
+        st.session_state.temp_cb = float(weather_hoje.get("Temperature", 15.0))
+        st.session_state.vento_vel_cb = float(wind_hoje.get("Speed", 5.0))
+        st.session_state.vento_dir_cb = float(wind_hoje.get("Bearing", 45.0))
+        st.session_state.nuvens_hoje_cb = weather_hoje.get("CloudDescription", "N/D")
+
+        # 2. Extração do Clima de AMANHÃ (Previsão)
+        weather_amanha = dados_json.get("WeatherTomorrow", {})
+        wind_amanha = weather_amanha.get("WindAtGroundLevel", {})
+        
+        st.session_state.temp_amanha_cb = float(weather_amanha.get("Temperature", 15.0))
+        st.session_state.vento_vel_amanha_cb = float(wind_amanha.get("Speed", 5.0))
+        st.session_state.vento_dir_amanha_cb = float(wind_amanha.get("Bearing", 45.0))
+        st.session_state.nuvens_amanha_cb = weather_amanha.get("CloudDescription", "N/D")
+        
+        st.session_state.status_cb = "✅ API Sincronizada! Telemetria AO VIVO."
             
     except Exception as e:
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
@@ -73,21 +88,27 @@ db_avioes = {
 }
 
 # ==========================================
-# 3. INTERFACE E BARRA LATERAL
+# 3. INTERFACE E BARRA LATERAL (AUTO-REFRESH)
 # ==========================================
 st.set_page_config(page_title="Painel Tático", layout="wide")
 st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.header("📡 Comando e Controlo")
-    if st.button("🔄 Puxar Dados do Servidor", use_container_width=True):
+    st.markdown("Telemetria em tempo real (Atualiza a cada 60s).")
+    
+    @st.fragment(run_every="60s")
+    def painel_telemetria_ativo():
         fetch_combatbox_data()
+        st.info(st.session_state.status_cb)
+        st.divider()
+        st.markdown("**METEOROLOGIA: MISSÃO ATUAL**")
+        st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
+        st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
+        st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
+        st.caption(f"⏱️ Última sincronização: {time.strftime('%H:%M:%S')}")
         
-    st.info(st.session_state.status_cb)
-    st.divider()
-    st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
-    st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
-    st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
+    painel_telemetria_ativo()
 
 st.title("🛩️ Painel Tático C4ISR")
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog", "🌐 Inteligência Global", "🛠️ Debug API"])
@@ -146,6 +167,7 @@ with tab2:
         ias = st.number_input("IAS (km/h)", value=280)
         proa_alvo = st.number_input("Proa (°)", value=90)
     with b2:
+        # Puxa automaticamente o clima de HOJE!
         vel_vento = st.number_input("Vel. Vento (m/s)", value=float(st.session_state.vento_vel_cb))
         dir_vento = st.number_input("Dir. Vento (°)", value=float(st.session_state.vento_dir_cb))
 
@@ -171,61 +193,34 @@ with tab3:
         st.info("Importe um Plano de Voo na Aba 1 para gerar o NavLog.")
 
 # ==========================================
-# 3. INTERFACE E BARRA LATERAL (AO VIVO)
-# ==========================================
-st.set_page_config(page_title="Painel Tático", layout="wide")
-st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
-
-with st.sidebar:
-    st.header("📡 Comando e Controlo")
-    st.markdown("Telemetria em tempo real ligada ao Combat Box.")
-    
-    # Este "decorador" diz ao Python para rodar esta função sozinho a cada 60 segundos!
-    @st.fragment(run_every="60s")
-    def telemetria_automatica():
-        # Executa a nossa função de API silenciosamente no fundo
-        fetch_combatbox_data()
-        
-        # Desenha os mostradores que vão piscar sozinhos a cada minuto
-        st.info(st.session_state.status_cb)
-        st.divider()
-        st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
-        st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
-        st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
-        
-        # Mostra a hora exata da última "batida" no servidor para você saber que está vivo
-        st.caption(f"⏱️ Última sincronização: {time.strftime('%H:%M:%S')}")
-
-    # Chamamos a função para ela começar o loop infinito
-    telemetria_automatica()
-
-# ==========================================
-# ABA 4: INTELIGÊNCIA GLOBAL (REESCRITA PARA O JSON REAL)
+# ABA 4: INTELIGÊNCIA GLOBAL (C4ISR)
 # ==========================================
 with tab4:
     st.header("🌐 Inteligência Tática e Logística")
     if st.session_state.dados_campanha:
         dados = st.session_state.dados_campanha
         
-        col_w, col_t = st.columns([1, 2])
+        st.subheader("⛅ Quadro Meteorológico")
+        c_hoje, c_amanha = st.columns(2)
         
-        with col_w:
-            st.subheader("⛅ Clima e Frontline")
-            st.info(f"O Céu amanhã: {dados.get('WeatherTomorrow', {}).get('CloudDescription', 'Desconhecido')}")
-            st.caption(dados.get('CurrentDayStateDescription', ''))
-                
+        with c_hoje:
+            st.info(f"**MISSÃO ATUAL (HOJE)**\n\nNuvens: {st.session_state.nuvens_hoje_cb}\n\nTemp: {st.session_state.temp_cb} °C | Vento: {st.session_state.vento_vel_cb} m/s a {st.session_state.vento_dir_cb}°")
+        with c_amanha:
+            st.warning(f"**PRÓXIMA MISSÃO (AMANHÃ)**\n\nNuvens: {st.session_state.nuvens_amanha_cb}\n\nTemp: {st.session_state.temp_amanha_cb} °C | Vento: {st.session_state.vento_vel_amanha_cb} m/s a {st.session_state.vento_dir_amanha_cb}°")
+            
+        st.caption(f"Situação da Guerra: {dados.get('CurrentDayStateDescription', 'Não informada.')}")
+        st.divider()
+        
+        col_t, col_b = st.columns([1, 1])
         with col_t:
             st.subheader("🎯 Objetivos Terrestres")
             objetivos = dados.get('Objectives', [])
             objetivos_ativos = [o for o in objetivos if o.get('ActiveToday') == True]
-            for obj in objetivos_ativos[:5]:
-                st.warning(f"**{obj.get('Name', 'Alvo')}** ({obj.get('Type', 'Instalação')}) - Zona: {obj.get('Coalition', 'N/D')}")
+            for obj in objetivos_ativos[:6]:
+                st.error(f"**{obj.get('Name', 'Alvo')}** ({obj.get('Type', 'Instalação')})")
                 
-        st.divider()
-        c_bases, c_ops = st.columns(2)
-        
-        with c_bases:
-            st.subheader("🛫 Logística de Base (Disponibilidade)")
+        with col_b:
+            st.subheader("🛫 Logística de Base")
             bases = dados.get('Airfields', [])
             if bases:
                 base_sel = st.selectbox("Inspecionar Estoque:", [b.get('Name', 'Base') for b in bases])
@@ -234,17 +229,18 @@ with tab4:
                     avioes_base = dados_base.get('AvailableAirframes', [])
                     if avioes_base:
                         for av in avioes_base:
-                            st.write(f"- {av.get('ColloquialName', av.get('Type', 'Aeronave'))}: **{av.get('NumberAvailable', 0)}** unidades")
+                            st.write(f"- {av.get('ColloquialName', av.get('Type', 'Aeronave'))}: **{av.get('NumberAvailable', 0)}** unid.")
                     else:
                         st.write("Sem aeronaves listadas.")
-                        
-        with c_ops:
-            st.subheader("🪂 Operações de Paraquedistas")
-            paras = dados.get('ParatrooperOps', [])
-            if paras:
-                for op in paras:
-                    st.success(f"Jogador: {op.get('Player', 'Piloto')} | Lançados: {op.get('DroppedInDz', 0)}")
-            else:
-                st.caption("Nenhuma operação de salto registada recentemente.")
     else:
-        st.info("Clique em 'Puxar Dados do Servidor' na barra lateral para carregar a Inteligência.")
+        st.info("Aguardando sincronização automática com o servidor...")
+
+# ==========================================
+# ABA 5: DEBUG DA API
+# ==========================================
+with tab5:
+    st.header("🛠️ Inspecionar JSON Bruto")
+    if st.session_state.dados_campanha:
+        st.code(json.dumps(st.session_state.dados_campanha, indent=4), language="json")
+    else:
+        st.info("A API ainda não foi carregada.")
