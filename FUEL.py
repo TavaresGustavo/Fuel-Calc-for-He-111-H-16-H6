@@ -588,7 +588,7 @@ def fmc_hud_final():
 
 fmc_hud_final()
 # ==========================================
-# ABA 5: INTELIGÊNCIA TÁTICA (C4ISR) - UNIFICADA
+# ABA 5: INTELIGÊNCIA TÁTICA (C4ISR)
 # ==========================================
 with tab5:
     st.header("🌐 Inteligência Tática e Logística (C4ISR)")
@@ -611,7 +611,7 @@ with tab5:
         
         st.divider()
 
-        # --- 2. FUNÇÕES AUXILIARES DE FILTRAGEM (ESCOPO LOCAL) ---
+        # --- 2. FUNÇÕES AUXILIARES ---
         def filtrar_bases_operacionais(lista, coalizao_alvo):
             resultado = []
             for b in lista:
@@ -642,10 +642,10 @@ with tab5:
         aliados_ativos = filtrar_bases_operacionais(airfields, ['Allies', 'Allied'])
         eixo_ativos = filtrar_bases_operacionais(airfields, ['Axis'])
 
-        # --- 4. EXIBIÇÃO DE AERÓDROMOS (DEFINIÇÃO DAS COLUNAS) ---
+        # --- 4. EXIBIÇÃO DE AERÓDROMOS (COLUNAS SINCRONIZADAS) ---
         st.subheader("🛫 Gestão de Aeródromos Operacionais")
         
-        # AQUI ESTAVA O ERRO: Definimos nomes curtos e fixos
+        # Definimos os nomes aqui: col_all_b e col_ax_b
         col_all_b, col_ax_b = st.columns(2)
 
         with col_all_b:
@@ -661,6 +661,7 @@ with tab5:
                     st.write(f"**Pista:** {'🛣️ Concreto' if b.get('RunwayIsConcrete') else '🌱 Grama'}")
                     render_hangar_logic(b)
 
+        # AQUI FOI O ERRO: Agora usando col_ax_b exatamente como definido acima
         with col_ax_b:
             st.markdown("### 🔴 AXIS BASES")
             if not eixo_ativos: 
@@ -677,7 +678,7 @@ with tab5:
 
         st.divider()
 
-        # --- 5. OBJETIVOS ESTRATÉGICOS (COLUNAS SEPARADAS) ---
+        # --- 5. OBJETIVOS ESTRATÉGICOS ---
         st.subheader("🎯 Objetivos e Alvos Prioritários")
         objetivos_ativos = [o for o in dados.get('Objectives', []) if o.get('ActiveToday')]
         
