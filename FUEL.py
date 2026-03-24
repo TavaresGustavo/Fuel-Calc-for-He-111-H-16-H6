@@ -611,17 +611,20 @@ with tab5:
         
         st.divider()
 
-        # --- 2. FUNÇÕES AUXILIARES ---
-        def filtrar_bases_operacionais(lista, coalizao_alvo):
+        # --- 2. FUNÇÕES DE FILTRAGEM (TAG: ActiveToday) ---
+        def filtrar_bases_por_atividade(lista, coalizao_alvo):
             resultado = []
             for b in lista:
+                # Normalização de Coalizão
                 b_coal = str(b.get('Coalition', '')).strip().lower()
                 alvos = [c.lower() for c in coalizao_alvo]
+                
                 if b_coal in alvos:
-                    is_op = b.get('IsOperational')
-                    status_op = str(is_op).lower() in ['true', '1']
-                    hangar = b.get('AvailableAirframes', [])
-                    if status_op and len(hangar) > 0:
+                    # A TAG MESTRE ENCONTRADA POR VOCÊ:
+                    is_active = b.get('ActiveToday')
+                    
+                    # Verificação robusta (funciona se for booleano ou string do JSON)
+                    if str(is_active).lower() in ['true', '1']:
                         resultado.append(b)
             return resultado
 
@@ -638,64 +641,56 @@ with tab5:
             else:
                 st.write("Sem estoque de aeronaves.")
 
-        # --- 3. EXECUÇÃO DOS FILTROS ---
-        aliados_ativos = filtrar_bases_operacionais(airfields, ['Allies', 'Allied'])
-        eixo_ativos = filtrar_bases_operacionais(airfields, ['Axis'])
+        # --- 3. EXECUÇÃO ---
+        aliados_ativos = filtrar_bases_por_atividade(airfields, ['Allies', 'Allied'])
+        eixo_ativos = filtrar_bases_por_atividade(airfields, ['Axis'])
 
-        # --- 4. EXIBIÇÃO DE AERÓDROMOS (COLUNAS SINCRONIZADAS) ---
-        st.subheader("🛫 Gestão de Aeródromos Operacionais")
+        # --- 4. EXIBIÇÃO DE AERÓDROMOS (COLUNAS) ---
+        st.subheader(f"🛫 Bases Ativas na Missão: {len(aliados_ativos) + len(eixo_ativos)}")
         
-        # Definimos os nomes aqui: col_all_b e col_ax_b
         col_all_b, col_ax_b = st.columns(2)
 
         with col_all_b:
-            st.markdown("### 🔵 ALLIES BASES")
-            if not aliados_ativos: 
-                st.caption("Nenhuma base aliada operacional.")
+            st.markdown("### 🔵 Allies Active Bases")
+            if not aliados_ativos: st.caption("Nenhuma base aliada ativa hoje.")
             for b in aliados_ativos:
                 nome = b.get('Name')
                 sup = b.get('SupplyLevel', 0)
-                prog = min(1.0, sup / 200.0)
                 with st.expander(f"📍 {nome} ({sup}/200)"):
-                    st.progress(prog)
-                    st.write(f"**Pista:** {'🛣️ Concreto' if b.get('RunwayIsConcrete') else '🌱 Grama'}")
+                    st.progress(min(1.0, sup / 200.0))
+                    st.write(f"**Superfície:** {'🛣️ Concreto' if b.get('RunwayIsConcrete') else '🌱 Grama'}")
                     render_hangar_logic(b)
 
-        # AQUI FOI O ERRO: Agora usando col_ax_b exatamente como definido acima
         with col_ax_b:
-            st.markdown("### 🔴 AXIS BASES")
-            if not eixo_ativos: 
-                st.error("⚠️ Nenhuma base operacional do Eixo detectada.")
+            st.markdown("### 🔴 Axis Active Bases")
+            if not eixo_ativos: st.error("⚠️ Nenhuma base operacional do Eixo detectada.")
             for b in eixo_ativos:
                 nome = b.get('Name')
                 sup = b.get('SupplyLevel', 0)
-                prog = min(1.0, sup / 200.0)
                 alerta = "🚨 " if sup < 20 else ""
                 with st.expander(f"{alerta}📍 {nome} ({sup}/200)"):
-                    st.progress(prog)
-                    st.write(f"**Pista:** {'🛣️ Concreto' if b.get('RunwayIsConcrete') else '🌱 Grama'}")
+                    st.progress(min(1.0, sup / 200.0))
+                    st.write(f"**Superfície:** {'🛣️ Concreto' if b.get('RunwayIsConcrete') else '🌱 Grama'}")
                     render_hangar_logic(b)
 
         st.divider()
 
-        # --- 5. OBJETIVOS ESTRATÉGICOS ---
+        # --- 5. OBJETIVOS ESTRATÉGICOS (SEPARADOS) ---
         st.subheader("🎯 Objetivos e Alvos Prioritários")
-        objetivos_ativos = [o for o in dados.get('Objectives', []) if o.get('ActiveToday')]
+        objetivos = [o for o in dados.get('Objectives', []) if o.get('ActiveToday')]
         
         col_all_obj, col_ax_obj = st.columns(2)
 
         with col_all_obj:
             st.markdown("### 🔵 Allies Targets")
-            allies_o = [o for o in objetivos_ativos if str(o.get('Coalition', '')).lower() in ['allies', 'allied']]
-            if not allies_o: st.caption("Sem alvos aliados ativos.")
+            allies_o = [o for o in objetivos if str(o.get('Coalition', '')).lower() in ['allies', 'allied']]
             for o in allies_o:
                 st.markdown(f":blue[🎯 **{o.get('Name')}**]")
                 st.caption(traduzir_texto(o.get('Description', '')))
 
         with col_ax_obj:
             st.markdown("### 🔴 Axis Targets")
-            axis_o = [o for o in objetivos_ativos if str(o.get('Coalition', '')).lower() == 'axis']
-            if not axis_o: st.caption("Sem alvos do eixo ativos.")
+            axis_o = [o for o in objetivos if str(o.get('Coalition', '')).lower() == 'axis']
             for o in axis_o:
                 st.markdown(f":red[🎯 **{o.get('Name')}**]")
                 st.caption(traduzir_texto(o.get('Description', '')))
