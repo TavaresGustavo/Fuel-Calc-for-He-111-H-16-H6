@@ -88,7 +88,7 @@ def fetch_combatbox_data():
         bearing_amanha_bruto = float(wind_amanha.get("Bearing", 45.0))
         st.session_state.vento_dir_amanha_cb = (bearing_amanha_bruto + 180) % 360
         
-        st.session_state.status_cb = "✅ API Sincronizada! (Correção de 180° Ativa)"
+        st.session_state.status_cb = "✅ API Sincronizada!"
             
     except Exception as e:
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
