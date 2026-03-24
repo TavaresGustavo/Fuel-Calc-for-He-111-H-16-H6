@@ -93,6 +93,26 @@ def fetch_combatbox_data():
     except Exception as e:
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
 
+def calcular_rumo_e_distancia(p1, p2):
+    # Coordenadas em radianos
+    lat1, lon1 = math.radians(p1['lat']), math.radians(p1['lng'])
+    lat2, lon2 = math.radians(p2['lat']), math.radians(p2['lng'])
+    
+    dlon = lon2 - lon1
+    
+    # Cálculo da Proa (Bearing)
+    y = math.sin(dlon) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+    rumo = (math.degrees(math.atan2(y, x)) + 360) % 360
+    
+    # Cálculo da Distância (Haversine - em km)
+    # Nota: No IL-2 Rheinland, a escala pode variar, mas 6371km é o padrão terra.
+    a = math.sin((lat2 - lat1) / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    distancia = 6371 * c 
+    
+    return rumo, distancia
+
 
 # ==========================================
 # 2.1 BASE DE DADOS DEFINITIVA (ALTITUDES)
@@ -333,19 +353,80 @@ with tab2:
     st.metric("Insira na Lotfe: Ângulo de Deriva", f"{abs(deriva_graus):.1f}° {'Direita' if deriva_graus > 0 else 'Esquerda'}")
 
 # ==========================================
-# ABA 3: E6B & NAVLOG HÍBRIDO
+# ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
 with tab3:
     st.header("🗺️ Centro de Navegação")
-    st.markdown("O **NavLog** (tabela) regista a rota. O **E6B** (motor) compensa o vento automaticamente.")
     
+    # --- NOVO: IMPORTADOR AUTOMÁTICO DE JSON ---
+    st.subheader("📥 Importar Planejamento")
+    upload_plano = st.file_uploader("Arraste o seu missao teste.json aqui", type=['json'])
+
+    if upload_plano:
+        try:
+            dados_plano = json.load(upload_plano)
+            # Localiza especificamente a rota marcada como plano de voo
+            plano_de_voo = next((r for r in dados_plano['routes'] if r.get('isFlightPlan')), None)
+            
+            if plano_de_voo:
+                lat_lngs = plano_de_voo.get('latLngs', [])
+                speeds = plano_de_voo.get('speeds', [])
+                altitudes = plano_de_voo.get('altitudes', [])
+                
+                novo_navlog = []
+                for i in range(len(lat_lngs) - 1):
+                    p_atual = lat_lngs[i]
+                    p_proximo = lat_lngs[i+1]
+                    
+                    rumo, dist = calcular_rumo_e_distancia(p_atual, p_proximo)
+                    
+                    # Extrai velocidade e altitude conforme as listas do JSON
+                    vel_perna = speeds[i] if i < len(speeds) else plano_de_voo.get('speed', 330)
+                    alt_perna = altitudes[i+1] if i+1 < len(altitudes) else plano_de_voo.get('altitude', 2000)
+
+                    novo_navlog.append({
+                        "Perna": f"WP {i} -> WP {i+1}",
+                        "Distância (km)": round(dist, 1),
+                        "Rumo (TC)": round(rumo, 1),
+                        "TAS (km/h)": int(vel_perna),
+                        "Altitude (m)": int(alt_perna)
+                    })
+                
+                st.session_state.navlog_manual = novo_navlog
+                st.success(f"✅ {len(novo_navlog)} pernas extraídas com sucesso!")
+            else:
+                st.error("Nenhuma rota de voo ativa encontrada no arquivo.")
+        except Exception as e:
+            st.error(f"Erro ao ler arquivo: {e}")
+
+    st.divider()
+
+    # --- INPUTS DO VENTO ---
     c_tas, c_dir, c_vel = st.columns(3)
     with c_tas:
-        nav_tas = st.number_input("Sua TAS esperada (km/h)", value=float(st.session_state.vel_calc), step=10.0)
+        # Pega a velocidade da primeira perna se existir
+        def_tas = float(st.session_state.navlog_manual[0].get("TAS (km/h)", st.session_state.vel_calc)) if st.session_state.navlog_manual else float(st.session_state.vel_calc)
+        nav_tas = st.number_input("Sua TAS esperada (km/h)", value=def_tas, step=10.0)
     with c_dir:
         nav_w_dir = st.number_input("Vento vindo DE (°)", value=float(st.session_state.vento_dir_cb), key="nav_dir_e6b")
     with c_vel:
         nav_w_spd = st.number_input("Vel. Vento (km/h)", value=float(st.session_state.vento_vel_cb * 3.6), step=5.0, key="nav_spd_e6b")
+
+    # --- NAVLOG EDITÁVEL ---
+    st.subheader("📝 Navigation Log (Diário de Rota)")
+    navlog_editado = st.data_editor(
+        st.session_state.navlog_manual, 
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "Perna": st.column_config.TextColumn("Nome da Perna"),
+            "Distância (km)": st.column_config.NumberColumn("Distância (km)", format="%.1f"),
+            "Rumo (TC)": st.column_config.NumberColumn("Rumo Mapa (TC °)", format="%.0f"),
+            "TAS (km/h)": st.column_config.NumberColumn("TAS (km/h)"),
+            "Altitude (m)": st.column_config.NumberColumn("Altitude (m)")
+        }
+    )
+    st.session_state.navlog_manual = navlog_editado
 
     # --- O DOCUMENTO (NAVLOG) ---
     st.subheader("📝 Navigation Log (Diário de Rota)")
