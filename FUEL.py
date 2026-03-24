@@ -61,13 +61,41 @@ def fetch_combatbox_data():
         dados_json = response.json()
         st.session_state.dados_campanha = dados_json 
         
-        # Tempo de fim da missão para countdown
-        st.session_state.mission_end_time   = dados_json.get("EstimatedMissionEnd", "")
-        st.session_state.mission_start_time = dados_json.get("CampaignDayMissionStartTime", "")
+        # Tempo de fim da missão — campo confirmado no HAR
+        st.session_state.mission_end_time = dados_json.get("EstimatedMissionEnd", "")
 
-        # Pilotos online
-        st.session_state.pilots_allied = dados_json.get("PilotsOnStationAllied", dados_json.get("AlliedPilotsOnStation", None))
-        st.session_state.pilots_axis   = dados_json.get("PilotsOnStationAxis",   dados_json.get("AxisPilotsOnStation",   None))
+        # --- CLIMA HOJE ---
+        weather_hoje = dados_json.get("Weather", {})
+        wind_hoje = weather_hoje.get("WindAtGroundLevel", {})
+        st.session_state.temp_cb = float(weather_hoje.get("Temperature", 15.0))
+        st.session_state.vento_vel_cb = float(wind_hoje.get("Speed", 5.0))
+        bearing_bruto = float(wind_hoje.get("Bearing", 45.0))
+        st.session_state.vento_dir_cb = (bearing_bruto + 180) % 360
+
+        # --- CLIMA AMANHÃ ---
+        weather_amanha = dados_json.get("WeatherTomorrow", {})
+        wind_amanha = weather_amanha.get("WindAtGroundLevel", {})
+        st.session_state.temp_amanha_cb = float(weather_amanha.get("Temperature", 15.0))
+        st.session_state.vento_vel_amanha_cb = float(wind_amanha.get("Speed", 5.0))
+        bearing_amanha_bruto = float(wind_amanha.get("Bearing", 45.0))
+        st.session_state.vento_dir_amanha_cb = (bearing_amanha_bruto + 180) % 360
+        
+        st.session_state.status_cb = "✅ API Sincronizada!"
+            
+    except Exception as e:
+        st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
+
+def fetch_pilots_online():
+    """Busca pilotos online do endpoint dedicado — coalition 1=Allied, 2=Axis."""
+    try:
+        r = requests.get("https://il2statsapi.combatbox.net/api/onlineplayers",
+                         headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
+        if r.status_code == 200:
+            players = r.json()
+            st.session_state.pilots_allied = sum(1 for p in players if p.get('coalition') == 1)
+            st.session_state.pilots_axis   = sum(1 for p in players if p.get('coalition') == 2)
+    except Exception:
+        pass
         
         # --- AJUSTE DE CONVENÇÃO: HOJE ---
         weather_hoje = dados_json.get("Weather", {})
@@ -227,6 +255,7 @@ with st.sidebar:
     @st.fragment(run_every="60s")
     def painel_telemetria_ativo():
         fetch_combatbox_data()
+        fetch_pilots_online()
         st.info(st.session_state.status_cb)
         st.divider()
         # Dados da campanha
@@ -292,37 +321,30 @@ with st.sidebar:
         if end_str:
             try:
                 from datetime import datetime, timezone
-                # Tenta parsear o formato ISO da API
-                for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
-                    try:
-                        end_dt = datetime.strptime(end_str, fmt).replace(tzinfo=timezone.utc)
-                        break
-                    except ValueError:
-                        continue
+                import re as _re
+                # Formato real da API: "2026-03-23T23:00:00.3452913Z"
+                # Trunca microssegundos para 6 dígitos (Python max) e remove Z
+                end_clean = _re.sub(r'(\.\d{6})\d*Z?$', r'\1', end_str.rstrip('Z'))
+                end_dt = datetime.strptime(end_clean, "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=timezone.utc)
+                now_utc  = datetime.now(timezone.utc)
+                restante = (end_dt - now_utc).total_seconds()
+                if restante > 0:
+                    hh = int(restante // 3600)
+                    mm = int((restante % 3600) // 60)
+                    ss = int(restante % 60)
+                    cor = "#ffcc00" if restante > 1800 else ("#ff8800" if restante > 600 else "#ff3333")
+                    st.markdown("**⏰ MISSION COUNTDOWN**")
+                    st.markdown(f"""
+                        <div style='text-align:center;font-size:38px;font-weight:900;
+                                    font-family:monospace;color:{cor};
+                                    background:#111;border-radius:8px;padding:8px 4px;
+                                    border:1px solid #333;letter-spacing:3px;margin-bottom:4px;'>
+                            {hh:02d}:{mm:02d}:{ss:02d}
+                        </div>
+                    """, unsafe_allow_html=True)
                 else:
-                    end_dt = None
-
-                if end_dt:
-                    now_utc  = datetime.now(timezone.utc)
-                    restante = (end_dt - now_utc).total_seconds()
-                    if restante > 0:
-                        hh = int(restante // 3600)
-                        mm = int((restante % 3600) // 60)
-                        ss = int(restante % 60)
-                        # Cor muda conforme urgência
-                        cor = "#ffcc00" if restante > 1800 else ("#ff8800" if restante > 600 else "#ff3333")
-                        st.markdown("**⏰ MISSION COUNTDOWN**")
-                        st.markdown(f"""
-                            <div style='text-align:center;font-size:38px;font-weight:900;
-                                        font-family:monospace;color:{cor};
-                                        background:#111;border-radius:8px;padding:8px 4px;
-                                        border:1px solid #333;letter-spacing:3px;'>
-                                {hh:02d}:{mm:02d}:{ss:02d}
-                            </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown("**⏰ MISSION COUNTDOWN**")
-                        st.error("🔄 Servidor a reiniciar...")
+                    st.markdown("**⏰ MISSION COUNTDOWN**")
+                    st.error("🔄 Servidor a reiniciar...")
             except Exception:
                 pass
 
@@ -938,8 +960,6 @@ with tab5:
 # ABA 6: MAPA TÁTICO (IL-2 MISSION PLANNER)
 # ==========================================
 with tab6:
-    st.header("🗺️ Mapa Tático — Combat Box Rhineland")
-    st.caption("Mapa ao vivo do servidor Combat Box com linha de frente, bases e objetivos.")
 
     MAP_URL = (
         "https://serverror.github.io/IL2-Mission-Planner/"
@@ -947,20 +967,62 @@ with tab6:
         "rhineland-campaign/rhineland-campaign-mission-planner-latest.json.aspx"
     )
 
-    # Botão para abrir em nova aba (caso o iframe não carregue)
-    col_map_btn, col_map_info = st.columns([1, 4])
-    with col_map_btn:
-        st.link_button("🔗 Abrir em nova aba", MAP_URL)
-    with col_map_info:
-        st.caption("O mapa mostra a linha de frente ao vivo, bases ativas, objetivos e o plano de voo carregado.")
+    # CSS: remove todo padding/margin da área de conteúdo quando estiver na aba do mapa
+    st.markdown("""
+        <style>
+        /* Remove padding lateral da área principal apenas quando o mapa está ativo */
+        section[data-testid="stMain"] > div:first-child {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            padding-top: 0 !important;
+        }
+        /* Container do iframe sem margens */
+        .map-full-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: #0e1117;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # iframe em tela cheia
+    # Botão flutuante para abrir em nova aba
     st.markdown(f"""
-        <iframe
-            src="{MAP_URL}"
-            width="100%"
-            height="820"
-            style="border:1px solid #333; border-radius:8px;"
-            allow="fullscreen"
-        ></iframe>
+        <div style="position:relative; margin-bottom:6px;">
+            <a href="{MAP_URL}" target="_blank"
+               style="display:inline-block; padding:6px 14px; background:#1a3a1a;
+                      border:1px solid #2a6a2a; border-radius:6px; color:#88ff88;
+                      text-decoration:none; font-size:13px;">
+                🔗 Abrir em nova aba
+            </a>
+            <span style="margin-left:12px; font-size:12px; color:#555;">
+                Linha de frente ao vivo · Bases · Objetivos
+            </span>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # iframe maximizado — usa negative margin para encostar na sidebar e borda direita
+    # height calculado para Full HD vertical (1920px) menos header/tabs (~110px)
+    st.markdown(f"""
+        <style>
+        .iframe-map-wrapper {{
+            margin-left:  -4rem;
+            margin-right: -4rem;
+            margin-bottom: -4rem;
+        }}
+        </style>
+        <div class="iframe-map-wrapper">
+            <iframe
+                src="{MAP_URL}"
+                width="100%"
+                height="1780"
+                style="display:block; border:none;"
+                allow="fullscreen"
+            ></iframe>
+        </div>
     """, unsafe_allow_html=True)
