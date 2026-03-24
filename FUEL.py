@@ -34,6 +34,9 @@ if 'vel_calc' not in st.session_state: st.session_state.vel_calc = 320.0
 if 'dist_calc' not in st.session_state: st.session_state.dist_calc = 250.0
 if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = None
 
+if 'tempo_pausado_acumulado' not in st.session_state: 
+    st.session_state.tempo_pausado_acumulado = 0.0
+
 # ==========================================
 # 1. FUNÇÕES DA API E TRADUÇÃO
 # ==========================================
@@ -512,6 +515,43 @@ with tab4:
                     if st.session_state.cronometro_rodando:
                         passado = time.time() - st.session_state.tempo_inicio_perna
                         restante = max(0, p['tempo'] - passado)
+
+                        # --- MONITOR VNAV EM TEMPO REAL (INSERIR NO HUD) ---
+                        # total_km: Distância total da missão (Aba 3)
+                        # dist_descent: Calculado pela física (Cruzeiro -> Pista)
+                        # Ponto TOD = Início da Perda de Altitude
+    distancia_tod_km = total_km - dist_descent 
+
+    if st.session_state.cronometro_rodando:
+    # 1. Calculamos o tempo total voado na missão
+    tempo_total_missao_seg = time.time() - st.session_state.tempo_inicio_missao_absoluto
+    
+    # 2. Estimamos a distância total percorrida (aproximada pela GS)
+    distancia_percorrida_total = (tempo_total_missao_seg / 3600) * gs_leg
+    
+    # 3. Calculamos a distância restante para o ponto de descida
+    distancia_para_tod = distancia_tod_km - distancia_percorrida_total
+
+    # --- SINALIZAÇÃO NO HUD (Avisos Visuais) ---
+    st.divider()
+    
+    # Alerta 1: Aproximação (Warning) - Faltando 10km
+    if 0 < distancia_para_tod <= 10:
+        st.warning(f"📉 **APROXIMAÇÃO DE TOD:** Iniciar descida em {distancia_para_tod:.1f} km.")
+        st.caption(f"Perfil: Descer para {alt_arr}m a {descent_rate}m/s.")
+        
+    # Alerta 2: Execução (Error) - Passou do ponto
+    elif distancia_para_tod <= 0:
+        st.error(f"⬇️ **INICIAR PERDA DE ALTITUDE AGORA!** Target: {alt_arr}m.")
+        st.caption(f"Razão: {descent_rate}m/s. Monitorar velocidade/ATA.")
+        
+    # Mensagem de Cruzeiro Nivelado (Info)
+    else:
+        dist_falta_TOC = TOC_dist - distancia_percorrida_total
+        if dist_falta_TOC > 0:
+             st.info(f"📊 Em Subida. Nivelar em {alt_cruzeiro}m daqui a {dist_falta_TOC:.1f} km.")
+        else:
+             st.info(f"📊 Em Cruzeiro. Nivelado a {alt_cruzeiro}m (VNAV Estável).")
                         
                         # --- LÓGICA DE ALERTA DE COMBUSTÍVEL ---
                         # Se o tempo total de missão restante for maior que o combustível planejado
