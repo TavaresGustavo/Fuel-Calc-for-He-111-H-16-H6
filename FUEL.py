@@ -130,8 +130,7 @@ with st.sidebar:
     painel_telemetria_ativo()
 
 st.title("🛩️ Painel Tático C4ISR")
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog Híbrido", "🌐 Inteligência Global"])
-
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 E6B & NavLog", "🌐 Inteligência Global"])
 # ==========================================
 # ABA 1: HANGAR
 # ==========================================
@@ -214,11 +213,11 @@ with tab2:
     st.metric("Insira na Lotfe: Ângulo de Deriva", f"{abs(deriva_graus):.1f}° {'Direita' if deriva_graus > 0 else 'Esquerda'}")
 
 # ==========================================
-# ABA 3: NAVLOG HÍBRIDO (Manual + E6B)
+# ABA 3: E6B & NAVLOG HÍBRIDO
 # ==========================================
 with tab3:
-    st.subheader("🗺️ Diário de Navegação Híbrido")
-    st.markdown("Pode desenhar a rota importando um ficheiro na Aba 1, ou **editar/adicionar linhas manualmente** na tabela abaixo.")
+    st.header("🗺️ Centro de Navegação")
+    st.markdown("O **NavLog** (tabela) regista a rota. O **E6B** (motor) compensa o vento automaticamente.")
     
     c_tas, c_dir, c_vel = st.columns(3)
     with c_tas:
@@ -226,38 +225,30 @@ with tab3:
     with c_dir:
         nav_w_dir = st.number_input("Vento vindo DE (°)", value=float(st.session_state.vento_dir_cb), key="nav_dir_e6b")
     with c_vel:
-        # A matemática de voo exige o vento em km/h, por isso fazemos a conversão do servidor aqui:
         nav_w_spd = st.number_input("Vel. Vento (km/h)", value=float(st.session_state.vento_vel_cb * 3.6), step=5.0, key="nav_spd_e6b")
 
-    st.markdown("**1. Insira os dados da sua rota (Folha de Cálculo Interativa):**")
-    
-    # Esta é a folha de cálculo mágica onde o piloto pode escrever!
+    # --- O DOCUMENTO (NAVLOG) ---
+    st.subheader("📝 Navigation Log (Diário de Rota)")
     navlog_editado = st.data_editor(
         st.session_state.navlog_manual, 
-        num_rows="dynamic", # Permite ao utilizador adicionar ou apagar linhas à vontade
+        num_rows="dynamic",
         use_container_width=True,
         column_config={
-            "Perna": st.column_config.TextColumn("Nome da Perna (Ex: Base -> Depósito)"),
+            "Perna": st.column_config.TextColumn("Nome da Perna"),
             "Distância (km)": st.column_config.NumberColumn("Distância (km)", min_value=0.1, format="%.1f"),
-            "Rumo (TC)": st.column_config.NumberColumn("Rumo Verdadeiro (TC °)", min_value=0.0, max_value=360.0, format="%.0f")
+            "Rumo (TC)": st.column_config.NumberColumn("Rumo Mapa (TC °)", min_value=0.0, max_value=360.0, format="%.0f")
         }
     )
-    
-    # Salva a edição para não apagar quando mudar de aba
     st.session_state.navlog_manual = navlog_editado
     
-    st.markdown("**2. Computador de Voo (A sua Bússola Compensada):**")
-    
-    # O motor E6B entra em ação a calcular tudo com base no que você escreveu na folha acima
     if len(navlog_editado) > 0:
         resultados_finais = []
         for linha in navlog_editado:
             try:
                 dist = float(linha.get("Distância (km)", 0.0))
                 tc_deg = float(linha.get("Rumo (TC)", 0.0))
-            except (ValueError, TypeError):
-                dist = 0.0
-                tc_deg = 0.0
+            except:
+                dist, tc_deg = 0.0, 0.0
                 
             nome_perna = linha.get("Perna", "N/D")
             
@@ -266,8 +257,7 @@ with tab3:
                 try:
                     sin_wca = max(-1.0, min(1.0, (nav_w_spd * math.sin(wa_rad)) / nav_tas))
                     wca_deg = math.degrees(math.asin(sin_wca))
-                except:
-                    wca_deg = 0.0
+                except: wca_deg = 0.0
 
                 th_deg = (tc_deg + wca_deg + 360) % 360
                 gs_leg = (nav_tas * math.cos(math.radians(wca_deg))) - (nav_w_spd * math.cos(wa_rad))
@@ -277,17 +267,49 @@ with tab3:
                 
                 resultados_finais.append({
                     "📍 Perna": nome_perna,
-                    "🗺️ Rumo Original": f"{tc_deg:.0f}°",
-                    "🧭 Voe nesta PROA": f"{th_deg:.0f}°",
+                    "🗺️ Rumo Mapa": f"{tc_deg:.0f}°",
+                    "🧭 Voar PROA (TH)": f"{th_deg:.0f}°",
                     "💨 Vel. Solo (GS)": f"{gs_leg:.0f} km/h",
-                    "⏱️ Tempo Estimado": f"{tempo_min:.1f} min"
+                    "⏱️ Tempo Voo": f"{tempo_min:.1f} min"
                 })
         
         if resultados_finais:
             st.table(resultados_finais)
-        else:
-            st.caption("Insira uma distância válida na tabela acima para gerar os cálculos de Proa e Tempo.")
 
+    st.divider()
+
+    # --- A FERRAMENTA (E6B) ---
+    st.subheader("🧮 Computador E6B (Cálculos de Bordo)")
+    col_tsd, col_conv = st.columns(2)
+    
+    with col_tsd:
+        st.markdown("**⏱️ Tempo, Velocidade, Distância (TSD)**")
+        modo_tsd = st.radio("Calcular:", ["Tempo", "Distância", "Velocidade (GS)"], horizontal=True)
+        if modo_tsd == "Tempo":
+            d_in = st.number_input("Distância (km)", value=50.0, key="d_t")
+            v_in = st.number_input("Velocidade (km/h)", value=300.0, key="v_t")
+            if v_in > 0: st.info(f"**Resultado:** {(d_in/v_in)*60:.1f} minutos")
+        elif modo_tsd == "Distância":
+            t_in = st.number_input("Tempo (min)", value=10.0, key="t_d")
+            v_in = st.number_input("Velocidade (km/h)", value=300.0, key="v_d")
+            st.info(f"**Resultado:** {v_in*(t_in/60):.1f} km")
+        else:
+            d_in = st.number_input("Distância (km)", value=50.0, key="d_v")
+            t_in = st.number_input("Tempo (min)", value=10.0, key="t_v")
+            if t_in > 0: st.info(f"**Resultado:** {d_in/(t_in/60):.0f} km/h")
+            
+    with col_conv:
+        st.markdown("**🔄 Conversões Imperiais**")
+        cat_conv = st.selectbox("Unidade:", ["Velocidade (km/h ↔ mph)", "Altitude (metros ↔ pés)"])
+        val_conv = st.number_input("Valor:", value=1000.0 if "Altitude" in cat_conv else 300.0)
+        
+        if "Velocidade" in cat_conv:
+            st.warning(f"**{val_conv} km/h** = {val_conv / 1.60934:.0f} mph")
+            st.warning(f"**{val_conv} mph** = {val_conv * 1.60934:.0f} km/h")
+        else:
+            st.warning(f"**{val_conv} metros** = {val_conv * 3.28084:.0f} pés")
+            st.warning(f"**{val_conv} pés** = {val_conv / 3.28084:.0f} metros")
+            
 # ==========================================
 # ABA 4: INTELIGÊNCIA GLOBAL E BRIEFINGS
 # ==========================================
