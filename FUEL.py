@@ -309,7 +309,82 @@ with tab3:
         else:
             st.warning(f"**{val_conv} metros** = {val_conv * 3.28084:.0f} pés")
             st.warning(f"**{val_conv} pés** = {val_conv / 3.28084:.0f} metros")
+
+# ==========================================
+# ABA 4: INTELIGÊNCIA GLOBAL E BRIEFINGS
+# ==========================================
+with tab4:
+    st.header("🌐 Inteligência Tática e Logística")
+    if st.session_state.dados_campanha:
+        dados = st.session_state.dados_campanha
+        
+        st.subheader("📜 Briefing do Comando (Traduzido)")
+        texto_hoje = dados.get('CurrentDayStateDescription', '')
+        texto_ontem = dados.get('PreviousDaysEventsDescription', '')
+        
+        if texto_hoje: st.info(traduzir_texto(texto_hoje))
+        if texto_ontem:
+            with st.expander("Ver Resumo do Dia Anterior"): st.write(traduzir_texto(texto_ontem))
+                
+        st.divider()
+        
+        st.subheader("⛅ Quadro Meteorológico")
+        c_hoje, c_amanha = st.columns(2)
+        with c_hoje:
+            st.info(f"**MISSÃO ATUAL (HOJE)**\n\nNuvens: {traduzir_texto(st.session_state.nuvens_hoje_cb)}\n\nTemp: {st.session_state.temp_cb} °C | Vento: {st.session_state.vento_vel_cb} m/s a {st.session_state.vento_dir_cb}°")
+        with c_amanha:
+            st.warning(f"**PRÓXIMA MISSÃO (AMANHÃ)**\n\nNuvens: {traduzir_texto(st.session_state.nuvens_amanha_cb)}\n\nTemp: {st.session_state.temp_amanha_cb} °C | Vento: {st.session_state.vento_dir_amanha_cb} m/s a {st.session_state.vento_dir_amanha_cb}°")
             
-with col_b:     
+        st.divider()
+        
+        col_t, col_b = st.columns([1, 1])
+        with col_t:
+            st.subheader("🎯 Objetivos Terrestres")
+            objetivos = dados.get('Objectives', [])
+            objetivos_ativos = [o for o in objetivos if o.get('ActiveToday') == True]
+            for obj in objetivos_ativos[:6]:
+                coalizao = str(obj.get('Coalition', '')).strip().lower()
+                icone = "🔵 Aliado" if coalizao in ['allied', 'allies'] else "🔴 Eixo" if coalizao == 'axis' else "⚪ Neutro"
+                tipo_traduzido = traduzir_texto(obj.get('Type', 'Instalação'))
+                st.error(f"**{obj.get('Name', 'Alvo')}** ({tipo_traduzido}) - {icone}")
+                
+        with col_b:
+            st.subheader("🛫 Infraestrutura da Base")
+            bases = dados.get('Airfields', [])
+            if bases:
+                base_sel = st.selectbox("Inspecionar Base:", [b.get('Name', 'Base') for b in bases])
+                dados_base = next((b for b in bases if b.get('Name') == base_sel), None)
+                
+                if dados_base:
+                    # Sistema de Alerta
+                    sob_ataque = dados_base.get('UnderAttack', False) or dados_base.get('IsUnderAttack', False)
+                    if sob_ataque:
+                        st.error("🚨 **ALERTA MÁXIMO: BASE SOB ATAQUE!** 🚨")
+                    else:
+                        st.success("✅ **Status: Base Segura**")
+                    
+                    st.divider()
+                    
+                    # Detalhes da Pista
+                    supply = dados_base.get('SupplyLevel', 0)
+                    bearing = dados_base.get('RunwayBearing', 0)
+                    is_concrete = dados_base.get('RunwayIsConcrete', False)
+                    tipo_pista = "🛣️ Concreto / Asfalto" if is_concrete else "🌱 Grama / Terra"
+                    
+                    st.caption("Detalhes da Pista")
+                    st.write(f"**Proa:** {bearing:03.0f}° / {(bearing + 180) % 360:03.0f}°")
+                    st.write(f"**Superfície:** {tipo_pista}")
+                    st.progress(max(0, min(100, int(supply))) / 100.0, text=f"📦 Suprimentos: {supply}%")
+                    
+                    st.divider()
+                    
+                    # Inventário
+                    st.caption("Aeronaves no Hangar")
+                    avioes_base = dados_base.get('AvailableAirframes', [])
+                    if avioes_base:
+                        for av in avioes_base:
+                            st.write(f"- {av.get('Type', 'Aeronave')}: **{av.get('NumberAvailable', 0)}** unid.")
+                    else:
+                        st.write("Sem aeronaves listadas.")
     else:
         st.info("Aguardando sincronização automática com o servidor...")
