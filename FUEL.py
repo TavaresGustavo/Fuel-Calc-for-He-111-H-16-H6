@@ -37,6 +37,13 @@ if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = N
 if 'tempo_pausado_acumulado' not in st.session_state: 
     st.session_state.tempo_pausado_acumulado = 0.0
 
+# --- Inicialização de variáveis de tempo ---
+if 'tempo_inicio_missao_absoluto' not in st.session_state:
+    st.session_state.tempo_inicio_missao_absoluto = None
+
+if 'cronometro_rodando' not in st.session_state:
+    st.session_state.cronometro_rodando = False
+
 # ==========================================
 # 1. FUNÇÕES DA API E TRADUÇÃO
 # ==========================================
@@ -541,50 +548,35 @@ def fmc_hud_final():
         # --- MONITOR VNAV EM TEMPO REAL ---
         distancia_tod_km = total_km - dist_descent 
 
-        if st.session_state.cronometro_rodando:
+        # SÓ CALCULA SE O CRONÔMETRO ESTIVER RODANDO E A VARIÁVEL EXISTIR
+        if st.session_state.cronometro_rodando and st.session_state.tempo_inicio_missao_absoluto is not None:
             # 1. Tempo total desde a decolagem
             tempo_total_missao_seg = time.time() - st.session_state.tempo_inicio_missao_absoluto
             
             # 2. Distância total percorrida (estimada)
-            # Usamos a GS da perna atual para o cálculo
-            distancia_percorrida_total = (tempo_total_missao_seg / 3600) * nav_tas # ou gs_leg
+            # Nota: use nav_tas ou a GS calculada para a perna
+            distancia_percorrida_total = (tempo_total_missao_seg / 3600) * nav_tas
             
             # 3. Distância para o ponto de descida (TOD)
             distancia_para_tod = distancia_tod_km - distancia_percorrida_total
 
-            st.divider() # Linha visual separando o cronômetro dos alertas
+            st.divider() 
 
-            # ALERTAS DE ALTITUDE (VNAV)
+            # ALERTAS DE ALTITUDE
             if 0 < distancia_para_tod <= 10:
                 st.warning(f"📉 **PREPARAR DESCIDA:** TOD em {distancia_para_tod:.1f} km")
-                st.caption(f"Alvo: {alt_arr}m | Razão: {descent_rate}m/s")
-                
             elif distancia_para_tod <= 0:
                 st.error(f"⬇️ **INICIAR PERDA DE ALTITUDE!** Passou {abs(distancia_para_tod):.1f} km")
-                st.caption(f"Mantenha {descent_rate}m/s para interceptar o perfil.")
             else:
-                # Status de Cruzeiro
-                dist_falta_TOC = TOC_dist - distancia_percorrida_total
-                if dist_falta_TOC > 0:
-                    st.info(f"🏔️ Em Subida. TOC em {dist_falta_TOC:.1f} km")
-                else:
-                    st.info(f"📊 Cruzeiro Estável. Próximo evento: Descida em {distancia_para_tod:.1f} km")
+                st.info(f"📊 Cruzeiro Estável. Próximo evento: Descida em {distancia_para_tod:.1f} km")
 
-            # --- LÓGICA DE ALERTA DE COMBUSTÍVEL ---
-            tempo_total_restante_seg = sum(leg['tempo'] for leg in pernas_fmc[idx:]) - passado
-            comb_disponivel = st.session_state.get('comb_litros_total', 1000)
-            autonomia_seg = (comb_disponivel / av['consumo_l_min']) * 60
-            
-            if tempo_total_restante_seg > autonomia_seg:
-                st.error("🚨 COMBUSTÍVEL INSUFICIENTE PARA O DESTINO!")
-        
-        # Botões de controle (fora do if do cronômetro para estarem sempre visíveis)
+        # BOTÕES DE CONTROLE
         with h3:
             if not st.session_state.cronometro_rodando:
                 if st.button("▶️ START", use_container_width=True):
                     st.session_state.cronometro_rodando = True
                     st.session_state.tempo_inicio_perna = time.time()
-                    st.session_state.tempo_inicio_missao_absoluto = time.time()
+                    st.session_state.tempo_inicio_missao_absoluto = time.time() # Aqui ela é criada
                     st.rerun()
             else:
                 if st.button("⏭️ NEXT", use_container_width=True):
