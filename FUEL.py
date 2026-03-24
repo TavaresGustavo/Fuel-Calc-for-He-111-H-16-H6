@@ -427,20 +427,6 @@ with tab3:
         }
     )
     st.session_state.navlog_manual = navlog_editado
-
-    # --- O DOCUMENTO (NAVLOG) ---
-    st.subheader("📝 Navigation Log (Diário de Rota)")
-    navlog_editado = st.data_editor(
-        st.session_state.navlog_manual, 
-        num_rows="dynamic",
-        use_container_width=True,
-        column_config={
-            "Perna": st.column_config.TextColumn("Nome da Perna"),
-            "Distância (km)": st.column_config.NumberColumn("Distância (km)", min_value=0.1, format="%.1f"),
-            "Rumo (TC)": st.column_config.NumberColumn("Rumo Mapa (TC °)", min_value=0.0, max_value=360.0, format="%.0f")
-        }
-    )
-    st.session_state.navlog_manual = navlog_editado
     
     if len(navlog_editado) > 0:
         resultados_finais = []
