@@ -85,36 +85,58 @@ def fetch_combatbox_data():
 
 
 # ==========================================
-# 2. BASE DE DADOS: Pesos e Aeronaves
+# 2. BASE DE DADOS: Aeronaves com Presets VNAV
 # ==========================================
-peso_bombas = {"SC 50": 50, "SC 250": 250, "SC 500": 500, "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400}
-
 db_avioes = {
-    "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
-        "armamento_fixo": "6 x 7.92 mm MG-15",
-        "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147, "Ambas": 193},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "4x SC 250": 1000, "2x SC 1000": 2180}
-    },
     "He-111 H-16": {
-        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
-        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
+        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, 
+        "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
+        "climb_rate_default": 2.5, "descent_rate_default": 4.0, # Presets VNAV
         "modificacoes": {"Padrão": 0},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "4x SC 250": 1000, "8x SC 250": 2000, "2x SC 500": 1000, "2x SC 1800": 3560, "1x SC 2500": 2400}
+        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "2x SC 1800": 3560, "1x SC 2500": 2400}
+    },
+    "He-111 H-6": {
+        "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, 
+        "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
+        "climb_rate_default": 2.5, "descent_rate_default": 4.0, # Presets VNAV
+        "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147},
+        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "2x SC 1000": 2180}
     },
     "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
-        "armamento_fixo": "Transporte",
-        "modificacoes": {"Padrão": 0, "Torre Traseira": 130, "Carga Interna (2300kg)": 2300, "12 Paraquedistas (1200kg)": 1200},
+        "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, 
+        "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
+        "climb_rate_default": 2.0, "descent_rate_default": 3.0, # Mais lento
+        "modificacoes": {"Padrão": 0, "Carga Interna": 2300, "12 Paraquedistas": 1200},
         "presets_bombas": {"Vazio": 0, "10x MAB 250": 2550}
     },
     "Ju-88 A-4": {
-        "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
-        "armamento_fixo": "1x 13mm | 4x 7.92mm",
-        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Inferior": -123},
-        "presets_bombas": {"Vazio": 0, "10x SC 50": 500, "4x SC 250": 1000, "4x SC 500": 2000}
+        "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, 
+        "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
+        "climb_rate_default": 3.5, "descent_rate_default": 5.0, # Mais rápido e robusto
+        "modificacoes": {"Padrão": 0, "Sem Gôndola": -123},
+        "presets_bombas": {"Vazio": 0, "4x SC 500": 2000, "28x SC 50": 1400}
     }
 }
+
+# ==========================================
+# 2.1 BASE DE DADOS: Aeródromos (Rhineland)
+# ==========================================
+db_aerodromos_rhineland = {
+    "Antwerp-Deurne (B52)": 12,
+    "Brussels-Evere (B56)": 55,
+    "Eindhoven (B78)": 20,
+    "Gilze-Rijen (B77)": 15,
+    "Heesch (B88)": 7,
+    "Hopsten": 42,
+    "Münster-Handorf": 48,
+    "Rheine-Bentlage": 35,
+    "Sint-Truiden (B55)": 75,
+    "Ursel (B67)": 29,
+    "Volkel (B80)": 14,
+    "Wesel": 25,
+    "Outro / Manual": 100
+}
+
 # ==========================================
 # 3. INTERFACE E BARRA LATERAL
 # ==========================================
@@ -343,71 +365,82 @@ with tab3:
 
 
 # ==========================================
-# ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER) - COMPLETO
+# ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER)
 # ==========================================
 with tab4:
     st.header("🚀 Monitor de Execução de Missão (FMC)")
     
     if not st.session_state.get('navlog_manual'):
-        st.info("⚠️ O FMC está em standby. Importe uma rota na Aba 1 ou crie pernas na Aba 3 para começar.")
+        st.info("⚠️ Configure ou importe uma rota para ativar o FMC.")
     else:
-        # 1. PARÂMETROS DE PERFORMANCE VERTICAL (VNAV)
-        with st.expander("📈 Perfil de Voo & Altitude (VNAV)", expanded=True):
+        # Puxamos o avião selecionado na Aba 1
+        av_nome = st.session_state.get('av_nome_selecionado', list(db_avioes.keys())[0])
+        av = db_avioes[av_nome]
+
+        # --- NOVA SEÇÃO: SELEÇÃO DE AERÓDROMOS (MAPA) ---
+        with st.expander("🌍 Configuração do Mapa (Rhineland)", expanded=True):
+            c_dep, c_arr = st.columns(2)
+            with c_dep:
+                base_dep = st.selectbox("Aeródromo de Decolagem:", list(db_aerodromos_rhineland.keys()))
+                alt_dep = db_aerodromos_rhineland[base_dep]
+            with c_arr:
+                base_arr = st.selectbox("Aeródromo de Destino:", list(db_aerodromos_rhineland.keys()))
+                alt_arr = db_aerodromos_rhineland[base_arr]
+            
+            st.caption(f"INFO: Decolagem a {alt_dep}m | Pouso a {alt_arr}m")
+
+        # --- PERFORMANCE VERTICAL (VNAV) ---
+        with st.expander("📈 Perfil de Voo & Altitude", expanded=True):
             v1, v2, v3, v4 = st.columns(4)
-            with v1: alt_cruzeiro = st.number_input("Altitude Cruzeiro (m)", value=4000, step=500)
-            with v2: climb_rate = st.number_input("Razão de Subida (m/s)", value=2.5, step=0.5)
-            with v3: descent_rate = st.number_input("Razão de Descida (m/s)", value=4.0, step=0.5)
-            with v4: alt_pista = st.number_input("Alt. Aeródromo (m)", value=100, step=50)
+            with v1: 
+                alt_cruzeiro = st.number_input("Altitude Cruzeiro (m)", value=4000, step=500)
+            with v2: 
+                climb_rate = st.number_input("Razão Subida (m/s)", 
+                                            value=float(av.get('climb_rate_default', 2.5)))
+            with v3: 
+                descent_rate = st.number_input("Razão Descida (m/s)", 
+                                             value=float(av.get('descent_rate_default', 4.0)))
+            with v4: 
+                # AQUI: Altitude do aeródromo de destino selecionado acima!
+                alt_pista = st.number_input("Alt. Destino (m)", value=alt_arr)
 
-            # --- MOTOR DE CÁLCULO DE ROTA (E6B INTEGRADO) ---
-            # Pegamos o vento e performance para calcular a trigonometria de cada perna
-            nav_tas_fmc = float(st.session_state.get('vel_calc', 320))
-            w_dir_fmc = float(st.session_state.vento_dir_cb)
-            w_spd_fmc = float(st.session_state.vento_vel_cb * 3.6) # Converter m/s para km/h
-            
-            pernas_fmc = []
-            dist_acumulada = 0
-            
-            for idx, linha in enumerate(st.session_state.navlog_manual):
-                try:
-                    dist = float(linha.get("Distância (km)", 0.0))
-                    tc = float(linha.get("Rumo (TC)", 0.0))
-                    
-                    # Cálculo do Triângulo de Ventos (WCA e GS)
-                    wa_rad = math.radians(w_dir_fmc - tc)
-                    sin_wca = max(-1.0, min(1.0, (w_spd_fmc * math.sin(wa_rad)) / nav_tas_fmc))
-                    wca_deg = math.degrees(math.asin(sin_wca))
-                    th_deg = (tc + wca_deg + 360) % 360
-                    gs_leg = max(1.0, (nav_tas_fmc * math.cos(math.radians(wca_deg))) - (w_spd_fmc * math.cos(wa_rad)))
-                    tempo_seg = (dist / gs_leg) * 3600
-                    
-                    dist_acumulada += dist
-                    pernas_fmc.append({
-                        "id": idx,
-                        "nome": linha.get("Perna", f"WP {idx}"),
-                        "proa": th_deg,
-                        "tempo": tempo_seg,
-                        "dist_total": dist_acumulada
-                    })
-                except: continue
+        # --- MOTOR DE CÁLCULO DE ROTA ---
+        nav_tas_fmc = float(st.session_state.get('vel_calc', 320))
+        w_dir_fmc = float(st.session_state.get('vento_dir_cb', 45.0))
+        w_spd_fmc = float(st.session_state.get('vento_vel_cb', 5.0) * 3.6)
+        
+        pernas_fmc = []
+        dist_acumulada = 0
+        for idx, linha in enumerate(st.session_state.navlog_manual):
+            try:
+                dist = float(linha.get("Distância (km)", 0.0))
+                tc = float(linha.get("Rumo (TC)", 0.0))
+                wa_rad = math.radians(w_dir_fmc - tc)
+                sin_wca = max(-1.0, min(1.0, (w_spd_fmc * math.sin(wa_rad)) / nav_tas_fmc))
+                wca_deg = math.degrees(math.asin(sin_wca))
+                th_deg = (tc + wca_deg + 360) % 360
+                gs_leg = max(1.0, (nav_tas_fmc * math.cos(math.radians(wca_deg))) - (w_spd_fmc * math.cos(wa_rad)))
+                tempo_seg = (dist / gs_leg) * 3600
+                dist_acumulada += dist
+                pernas_fmc.append({"id": idx, "nome": linha.get("Perna", f"WP{idx}"), "proa": th_deg, "tempo": tempo_seg, "dist_total": dist_acumulada})
+            except: continue
 
-            # --- GRÁFICO DE PERFIL VERTICAL ---
-            if pernas_fmc:
-                total_missao_km = pernas_fmc[-1]['dist_total']
-                # Cálculo de TOC (Top of Climb) e TOD (Top of Descent)
-                # Distância = (Tempo de subida) * Velocidade
-                dist_subida = ((alt_cruzeiro - alt_pista) / climb_rate) * (nav_tas_fmc / 3600)
-                dist_descida = ((alt_cruzeiro - alt_pista) / descent_rate) * (nav_tas_fmc / 3600)
-                
-                df_vnav = pd.DataFrame({
-                    "Distância (km)": [0, dist_subida, max(dist_subida, total_missao_km - dist_descida), total_missao_km],
-                    "Altitude (m)": [alt_pista, alt_cruzeiro, alt_cruzeiro, alt_pista]
-                })
-                st.area_chart(df_vnav.set_index("Distância (km)"))
-                st.caption(f"🏔️ TOC: {dist_subida:.1f} km | 📉 TOD: {total_missao_km - dist_descida:.1f} km")
+        # --- GRÁFICO DE PERFIL (VNAV) ---
+        if pernas_fmc:
+            total_km = pernas_fmc[-1]['dist_total']
+            # Distância de subida/descida baseada nos aeródromos escolhidos
+            dist_climb = ((alt_cruzeiro - alt_dep) / climb_rate) * (nav_tas_fmc / 3600)
+            dist_descent = ((alt_cruzeiro - alt_arr) / descent_rate) * (nav_tas_fmc / 3600)
+            
+            df_vnav = pd.DataFrame({
+                "Distância (km)": [0, dist_climb, max(dist_climb, total_km - dist_descent), total_km],
+                "Altitude (m)": [alt_dep, alt_cruzeiro, alt_cruzeiro, alt_arr]
+            })
+            st.area_chart(df_vnav.set_index("Distância (km)"))
+            st.caption(f"🏔️ TOC: {dist_climb:.1f} km (após decolagem de {base_dep}) | 📉 TOD: {total_km - dist_descent:.1f} km (para {base_arr})")
 
         st.divider()
-
+        
         # 2. HUD DE EXECUÇÃO (CRONÓMETRO ATIVO)
         @st.fragment(run_every="1s")
         def monitor_fmc_ativo():
