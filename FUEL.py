@@ -94,27 +94,22 @@ def fetch_combatbox_data():
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
 
 def calcular_rumo_e_distancia(p1, p2):
-    # No IL-2 e planners, tratamos lat/lng como um grid X, Y plano
-    # lng = X (Leste/Oeste)
-    # lat = Y (Norte/Sul)
-    
-    dx = p2['lng'] - p1['lng']
-    dy = p2['lat'] - p1['lat']
-    
-    # 1. CÁLCULO DO RUMO (Bearing Cartesiano)
-    # O math.atan2(dx, dy) calcula o ângulo a partir do topo (Norte = 0°)
-    rumo_rad = math.atan2(dx, dy)
-    rumo_deg = math.degrees(rumo_rad)
-    
-    # Normaliza para 0-360°
-    rumo_final = (rumo_deg + 360) % 360
-    
-    # 2. CÁLCULO DA DISTÂNCIA (Pitágoras)
-    # No seu JSON, as coordenadas estão em graus decimais.
-    # 1 grau de latitude/longitude no mapa Rheinland equivale a ~111.12 km
-    dist_raw = math.sqrt(dx**2 + dy**2)
-    distancia_km = dist_raw * 111.12 
-    
+    # No IL-2 Mission Planner (Rheinland), o sistema de coordenadas funciona assim:
+    # lat cresce para NORTE (menos negativo = mais norte)
+    # lng cresce para LESTE
+    # Fórmula correta: atan2(dlng, dlat) — Norte = dlat+, Leste = dlng+
+
+    dlng = p2['lng'] - p1['lng']   # Componente Leste (+) / Oeste (-)
+    dlat = p2['lat'] - p1['lat']   # Componente Norte (+) / Sul (-)
+
+    # Bearing a partir do Norte (0=N, 90=E, 180=S, 270=W)
+    rumo_rad = math.atan2(dlng, dlat)
+    rumo_final = (math.degrees(rumo_rad) + 360) % 360
+
+    # Distancia: 1 grau = ~111.12 km no mapa Rheinland
+    dist_raw = math.sqrt(dlng**2 + dlat**2)
+    distancia_km = dist_raw * 111.12
+
     return rumo_final, distancia_km
 
 # ==========================================
@@ -262,7 +257,7 @@ with tab1:
     # --- Seção de Importação ---
     col_f, col_clear = st.columns([3, 1])
     with col_f: 
-        arquivo_plano = st.file_uploader("📥 Importar Rota (.json)", type=["json"])
+        arquivo_plano = st.file_uploader("📥 Importar Plano de Voo (.json)", type=["json"])
         
         if arquivo_plano is not None:
             file_content = arquivo_plano.getvalue()
@@ -272,24 +267,37 @@ with tab1:
                 st.session_state.last_file_hash = current_hash
                 try:
                     dados_plano = json.loads(file_content)
-                    if "routes" in dados_plano: 
-                        rota = dados_plano["routes"][0]
-                        coords = rota["latLngs"]
+                    if "routes" in dados_plano:
+                        # Prioridade: rota marcada como isFlightPlan
+                        plano = next((r for r in dados_plano["routes"] if r.get("isFlightPlan")), dados_plano["routes"][0])
+                        coords  = plano["latLngs"]
+                        speeds  = plano.get("speeds", [])
+                        altitudes = plano.get("altitudes", [])
+                        nome_rota = plano.get("name", "Rota")
                         navlog_temp = []
                         dist_total = 0.0
-                        for i in range(len(coords)-1):
-                            dx, dy = coords[i+1]['lng'] - coords[i]['lng'], coords[i+1]['lat'] - coords[i]['lat']
-                            d_perna = math.hypot(dx, dy) * 3.0 
-                            dist_total += d_perna
-                            tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
-                            navlog_temp.append({"Perna": f"WP{i}➔WP{i+1}", "Distância (km)": round(d_perna, 1), "Rumo (TC)": round(tc_deg, 0)})
+                        for i in range(len(coords) - 1):
+                            rumo, dist = calcular_rumo_e_distancia(coords[i], coords[i+1])
+                            dist_total += dist
+                            vel_p = speeds[i] if i < len(speeds) else int(plano.get("speed", 330))
+                            alt_p = altitudes[i+1] if i+1 < len(altitudes) else int(plano.get("altitude", 2000))
+                            navlog_temp.append({
+                                "Perna": f"WP {i} -> WP {i+1}",
+                                "Distância (km)": round(dist, 1),
+                                "Rumo (TC)": round(rumo, 0),
+                                "TAS (km/h)": int(vel_p),
+                                "Altitude (m)": int(alt_p)
+                            })
                         st.session_state.navlog_manual = navlog_temp
                         st.session_state.dist_calc = dist_total
-                    else: 
+                        if navlog_temp:
+                            st.session_state.vel_calc = float(navlog_temp[0]["TAS (km/h)"])
+                    else:
                         st.session_state.navlog_manual = dados_plano
                         st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
-                    st.success("✅ Rota carregada com sucesso!")
-                except: st.error("Erro ao processar o arquivo JSON.")
+                    st.success(f"✅ {len(st.session_state.navlog_manual)} pernas extraídas e enviadas ao NavLog!")
+                except Exception as e:
+                    st.error(f"Erro ao processar o arquivo JSON: {e}")
             
     with col_clear:
         if st.button("🗑️ Reset Rota", use_container_width=True): 
@@ -337,172 +345,58 @@ with tab1:
 # ABA 2: CONFIGURAÇÃO DA MIRA (LOFTE 7)
 # ==========================================
 with tab2:
+    # CSS para Sliders Touch-Friendly (Gordos para facilitar o uso no tablet/celular)
     st.markdown("""
         <style>
-            /* Fundo escuro igual ao site spiff */
-            .lofte-container { background-color: #333333; padding: 20px; border-radius: 8px; }
-
-            /* Knobs grandes e touch-friendly */
-            .stSlider [data-baseweb="slider"] { height: 50px; }
-            .stSlider [data-baseweb="thumb"] { height: 44px; width: 44px; }
-
-            /* Resultado em destaque */
-            .result-box {
-                background-color: #1a1a1a;
-                border: 2px solid #555;
-                border-radius: 8px;
-                padding: 18px;
-                text-align: center;
-            }
-            .result-label { color: #aaaaaa; font-size: 14px; margin-bottom: 4px; }
-            .result-hdg  { color: #EE2222; font-size: 52px; font-weight: bold; line-height: 1; }
-            .result-spd  { color: #33EE33; font-size: 52px; font-weight: bold; line-height: 1; }
-            .result-unit { color: #888888; font-size: 16px; }
-
-            /* Input knob: plane=vermelho, wind=azul, speed=verde */
-            .knob-plane  .stSlider [data-baseweb="thumb"] { background-color: #FF6666 !important; }
-            .knob-wind   .stSlider [data-baseweb="thumb"] { background-color: #6666FF !important; }
-            .knob-speed  .stSlider [data-baseweb="thumb"] { background-color: #66FF66 !important; }
+            .stSlider [data-baseweb="slider"] { height: 45px; }
+            .stSlider [data-baseweb="thumb"] { height: 40px; width: 40px; background-color: #FF4B4B; }
+            .stMetric { background-color: #1e2124; padding: 15px; border-radius: 10px; border: 1px solid #444; }
         </style>
     """, unsafe_allow_html=True)
 
-    # --- Título fiel ao site ---
-    st.markdown("""
-        <div style='background:#333333; padding:14px 20px; border-radius:8px; margin-bottom:16px;'>
-            <h3 style='color:#dddddd; margin:0;'>IL2 BoX Bombsight Wind Calculator</h3>
-            <p style='color:#aaaaaa; margin:6px 0 0 0; font-size:14px;'>
-                Insira a proa do avião, a direção e velocidade do vento para obter o ângulo e
-                velocidade relativa do vento que deve ser inserido na mira.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+    st.header("🎯 Ajuste de Vento da Mira")
+    st.caption("Ajuste os valores abaixo para obter os parâmetros de entrada do Lofte 7.")
 
-    # ── ENTRADAS: 3 "KNOBS" ──────────────────────────────────────────────────
-    col_ph, col_wh, col_ws = st.columns(3)
+    # --- INPUTS (OS 3 FATORES ESSENCIAIS) ---
+    # Plane Heading: Sua proa atual
+    phead = st.slider("🧭 PLANE HEADING (°)", 0, 360, 0, step=1)
+    
+    # Wind Direction (FROM): De onde o vento vem no mapa
+    whead = st.slider("🌬️ WIND DIRECTION (FROM °)", 0, 360, 0, step=1)
+    
+    # Wind Speed: Velocidade do vento no mapa
+    wspeed = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.1)
 
-    with col_ph:
-        st.markdown("""<p style='text-align:center; color:#FF6666; font-weight:bold;
-                        font-size:15px; margin-bottom:6px;'>✕ Plane Heading</p>""",
-                    unsafe_allow_html=True)
-        phead = st.slider("Plane Heading (°)", 0, 359, 0, step=1,
-                          label_visibility="collapsed", key="phdg_knob")
-        st.markdown(f"""<div style='text-align:center; font-size:40px; font-weight:bold;
-                        color:#FF6666; background:#222; border-radius:50%;
-                        width:100px; height:100px; line-height:100px; margin:auto;'>
-                        {phead}</div>""", unsafe_allow_html=True)
-
-    with col_wh:
-        st.markdown("""<p style='text-align:center; color:#6666FF; font-weight:bold;
-                        font-size:15px; margin-bottom:6px;'>✕ Wind Heading</p>""",
-                    unsafe_allow_html=True)
-        whead = st.slider("Wind Heading (°)", 0, 359, 0, step=1,
-                          label_visibility="collapsed", key="whdg_knob")
-        st.markdown(f"""<div style='text-align:center; font-size:40px; font-weight:bold;
-                        color:#6666FF; background:#222; border-radius:50%;
-                        width:100px; height:100px; line-height:100px; margin:auto;'>
-                        {whead}</div>""", unsafe_allow_html=True)
-
-    with col_ws:
-        st.markdown("""<p style='text-align:center; color:#66FF66; font-weight:bold;
-                        font-size:15px; margin-bottom:6px;'>✕ Wind Speed (m/s)</p>""",
-                    unsafe_allow_html=True)
-        wspeed = st.slider("Wind Speed (m/s)", 0, 30, 0, step=1,
-                           label_visibility="collapsed", key="wspeed_knob")
-        st.markdown(f"""<div style='text-align:center; font-size:40px; font-weight:bold;
-                        color:#66FF66; background:#222; border-radius:50%;
-                        width:100px; height:100px; line-height:100px; margin:auto;'>
-                        {wspeed}</div>""", unsafe_allow_html=True)
-
-    st.divider()
-
-    # ── CÁLCULO (lógica idêntica ao site spiff) ───────────────────────────────
-    # 1. Relative wind heading (−179 … +180)
-    raw = (whead - phead) % 360
-    sight_wind_hdg = raw if raw <= 180 else raw - 360
-
-    # 2. Wind speed is used directly (m/s)
+    # --- CÁLCULO DO VETOR RELATIVO (LÓGICA SPIFF) ---
+    # O "Sight Wind Hdg" é o ângulo do vento em relação ao nariz do avião
+    # A fórmula inverte o sentido para que o piloto saiba para onde o vento "aponta" no visor
+    sight_wind_hdg = (whead - phead + 360) % 360
+    
+    # No Lofte 7, a velocidade inserida é a velocidade real do vento (m/s)
     sight_wind_speed = wspeed
 
-    # ── RESULTADOS ────────────────────────────────────────────────────────────
-    st.markdown("<p style='font-weight:bold; color:#dddddd; font-size:18px;'>Results</p>",
-                unsafe_allow_html=True)
+    # --- O ÚNICO RESULTADO QUE VOCÊ QUER ---
+    st.divider()
+    
+    res1, res2 = st.columns(2)
+    
+    with res1:
+        st.metric(label="× Sight Wind Hdg", value=f"{sight_wind_hdg}°")
+        st.caption("Gire o seletor de direção na mira para este valor.")
 
-    r1, _gap, r2 = st.columns([2, 0.5, 2])
+    with res2:
+        st.metric(label="× Sight Wind Speed", value=f"{sight_wind_speed} m/s")
+        st.caption("Ajuste a força do vento na engrenagem da mira.")
 
-    with r1:
-        st.markdown(f"""
-            <div class='result-box'>
-                <div class='result-label'>✕ Sight Wind Hdg</div>
-                <div class='result-hdg'>{sight_wind_hdg:+d}</div>
-                <div class='result-unit'>graus</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    with r2:
-        st.markdown(f"""
-            <div class='result-box'>
-                <div class='result-label'>✕ Sight Wind Speed</div>
-                <div class='result-spd'>{sight_wind_speed}</div>
-                <div class='result-unit'>m/s</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    # ── DICA TÁTICA ───────────────────────────────────────────────────────────
-    st.markdown("<br>", unsafe_allow_html=True)
+    # --- DICA TÁTICA ---
     if sight_wind_speed > 0:
-        direcao_txt = "DIREITA ➡️" if sight_wind_hdg > 0 else ("ESQUERDA ⬅️" if sight_wind_hdg < 0 else "FRONTAL ⬆️")
-        st.info(
-            f"💡 **Configure sua mira Lofte 7 com:** Hdg = **{sight_wind_hdg:+d}°** "
-            f"({direcao_txt}) | Speed = **{sight_wind_speed} m/s**"
-        )
-    else:
-        st.info("💡 Sem vento — não é necessário ajuste de vento na mira.")
+        st.info(f"💡 Configure sua mira com **{sight_wind_hdg}°** e **{sight_wind_speed} m/s** antes de iniciar o bomb run.")
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
 with tab3:
     st.header("🗺️ Centro de Navegação")
-    
-    # --- NOVO: IMPORTADOR AUTOMÁTICO DE JSON ---
-    st.subheader("📥 Importar Planejamento")
-    upload_plano = st.file_uploader("Arraste o seu missao teste.json aqui", type=['json'])
-
-    if upload_plano:
-        try:
-            dados_plano = json.load(upload_plano)
-            # Localiza especificamente a rota marcada como plano de voo
-            plano_de_voo = next((r for r in dados_plano['routes'] if r.get('isFlightPlan')), None)
-            
-            if plano_de_voo:
-                lat_lngs = plano_de_voo.get('latLngs', [])
-                speeds = plano_de_voo.get('speeds', [])
-                altitudes = plano_de_voo.get('altitudes', [])
-                
-                novo_navlog = []
-                for i in range(len(lat_lngs) - 1):
-                    p_atual = lat_lngs[i]
-                    p_proximo = lat_lngs[i+1]
-                    
-                    rumo, dist = calcular_rumo_e_distancia(p_atual, p_proximo)
-                    
-                    # Extrai velocidade e altitude conforme as listas do JSON
-                    vel_perna = speeds[i] if i < len(speeds) else plano_de_voo.get('speed', 330)
-                    alt_perna = altitudes[i+1] if i+1 < len(altitudes) else plano_de_voo.get('altitude', 2000)
-
-                    novo_navlog.append({
-                        "Perna": f"WP {i} -> WP {i+1}",
-                        "Distância (km)": round(dist, 1),
-                        "Rumo (TC)": round(rumo, 1),
-                        "TAS (km/h)": int(vel_perna),
-                        "Altitude (m)": int(alt_perna)
-                    })
-                
-                st.session_state.navlog_manual = novo_navlog
-                st.success(f"✅ {len(novo_navlog)} pernas extraídas com sucesso!")
-            else:
-                st.error("Nenhuma rota de voo ativa encontrada no arquivo.")
-        except Exception as e:
-            st.error(f"Erro ao ler arquivo: {e}")
+    st.caption("📥 Importe o plano de voo na **Aba 1 (Hangar)** para preencher o NavLog automaticamente.")
 
     st.divider()
 
