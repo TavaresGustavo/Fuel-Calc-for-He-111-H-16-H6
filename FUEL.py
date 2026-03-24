@@ -87,11 +87,12 @@ def fetch_combatbox_data():
 # ==========================================
 # 2. BASE DE DADOS: Aeronaves e Mapas
 # ==========================================
-db_aerodromos_rhineland = {
+db_altitudes_tecnico = {
     "Antwerp-Deurne (B52)": 12, "Brussels-Evere (B56)": 55, "Eindhoven (B78)": 20,
     "Gilze-Rijen (B77)": 15, "Heesch (B88)": 7, "Hopsten": 42, "Münster-Handorf": 48,
     "Rheine-Bentlage": 35, "Sint-Truiden (B55)": 75, "Ursel (B67)": 29, 
-    "Volkel (B80)": 14, "Wesel": 25, "Helmond (B86)": 20, "Venlo": 30
+    "Volkel (B80)": 14, "Wesel": 25, "Venlo": 30, "Helmond (B86)": 20,
+    "Deelen": 48, "Handorf": 48, "Achmer": 54, "Eversheide": 40, "Metz": 165
 }
 
 db_avioes = {
