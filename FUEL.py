@@ -516,70 +516,85 @@ with tab4:
                         passado = time.time() - st.session_state.tempo_inicio_perna
                         restante = max(0, p['tempo'] - passado)
 
-                       # --- MONITOR VNAV EM TEMPO REAL ---
-distancia_tod_km = total_km - dist_descent 
-
-if st.session_state.cronometro_rodando:
-    # 1. Calculamos o tempo total voado na missão (Linha 527 corrigida)
-    tempo_total_missao_seg = time.time() - st.session_state.tempo_inicio_missao_absoluto
+# --- HUD DE EXECUÇÃO E ALERTA DE COMBUSTÍVEL ---
+@st.fragment(run_every="1s")
+def fmc_hud_final():
+    idx = st.session_state.index_perna_ativa
     
-    # 2. Estimamos a distância total percorrida (GS da perna atual)
-    distancia_percorrida_total = (tempo_total_missao_seg / 3600) * gs_leg
-    
-    # 3. Calculamos a distância restante para o ponto de descida (TOD)
-    distancia_para_tod = distancia_tod_km - distancia_percorrida_total
-
-    # --- ALERTAS VISUAIS NO HUD ---
-    st.divider()
-    
-    if 0 < distancia_para_tod <= 10:
-        st.warning(f"📉 **PREPARAR DESCIDA:** TOD em {distancia_para_tod:.1f} km.")
-        st.caption(f"Alvo: {alt_arr}m | Razão: {descent_rate}m/s")
+    if idx < len(pernas_fmc):
+        p = pernas_fmc[idx]
+        h1, h2, h3 = st.columns([2, 1, 1])
         
-    elif distancia_para_tod <= 0:
-        st.error(f"⬇️ **INICIAR PERDA DE ALTITUDE!** Passou {abs(distancia_para_tod):.1f} km do ponto.")
-        st.caption(f"Mantenha {descent_rate}m/s para interceptar o perfil.")
+        with h1:
+            st.subheader(f"📍 Perna: {p['nome']}")
+            st.markdown(f"## 🧭 PROA: {p['proa']:.0f}°")
         
-    else:
-        # Status de Cruzeiro
-        dist_falta_TOC = TOC_dist - distancia_percorrida_total
-        if dist_falta_TOC > 0:
-             st.info(f"🏔️ Em Subida. TOC em {dist_falta_TOC:.1f} km.")
-        else:
-             st.info(f"📊 Em Cruzeiro. Próximo evento: Descida em {distancia_para_tod:.1f} km.")
-                        
-                        # --- LÓGICA DE ALERTA DE COMBUSTÍVEL ---
-                        # Se o tempo total de missão restante for maior que o combustível planejado
-                        tempo_total_restante_seg = sum(leg['tempo'] for leg in pernas_fmc[idx:]) - passado
-                        comb_disponivel = st.session_state.get('comb_litros_total', 1000) # Puxado da Aba 1
-                        autonomia_seg = (comb_disponivel / av['consumo_l_min']) * 60
-                        
-                        if tempo_total_restante_seg > autonomia_seg:
-                            st.error("🚨 COMBUSTÍVEL INSUFICIENTE!")
-                        elif tempo_total_restante_seg > (autonomia_seg * 0.8):
-                            st.warning("⚠️ RESERVA SENDO CONSUMIDA")
-                        
-                        m, s = divmod(int(restante), 60)
-                        st.metric("Tempo WP", f"{m:02d}:{s:02d}")
-                    else:
-                        m, s = divmod(int(p['tempo']), 60)
-                        st.metric("ETE", f"{m:02d}:{s:02d}")
-
-                with h3:
-                    if not st.session_state.cronometro_rodando:
-                        if st.button("▶️ START", use_container_width=True):
-                            st.session_state.cronometro_rodando = True
-                            st.session_state.tempo_inicio_perna = time.time()
-                            st.rerun()
-                    else:
-                        if st.button("⏭️ NEXT", use_container_width=True):
-                            st.session_state.index_perna_ativa += 1
-                            st.session_state.tempo_inicio_perna = time.time()
-                            st.rerun()
+        with h2:
+            if st.session_state.cronometro_rodando:
+                passado = time.time() - st.session_state.tempo_inicio_perna
+                restante = max(0, p['tempo'] - passado)
+                m, s = divmod(int(restante), 60)
+                st.metric("Tempo WP", f"{m:02d}:{s:02d}")
             else:
-                st.success("🏁 Objetivo Atingido!")
+                st.metric("Tempo WP", "--:--")
 
-        fmc_hud_final()
+        # --- MONITOR VNAV EM TEMPO REAL ---
+        distancia_tod_km = total_km - dist_descent 
+
+        if st.session_state.cronometro_rodando:
+            # 1. Tempo total desde a decolagem
+            tempo_total_missao_seg = time.time() - st.session_state.tempo_inicio_missao_absoluto
+            
+            # 2. Distância total percorrida (estimada)
+            # Usamos a GS da perna atual para o cálculo
+            distancia_percorrida_total = (tempo_total_missao_seg / 3600) * nav_tas # ou gs_leg
+            
+            # 3. Distância para o ponto de descida (TOD)
+            distancia_para_tod = distancia_tod_km - distancia_percorrida_total
+
+            st.divider() # Linha visual separando o cronômetro dos alertas
+
+            # ALERTAS DE ALTITUDE (VNAV)
+            if 0 < distancia_para_tod <= 10:
+                st.warning(f"📉 **PREPARAR DESCIDA:** TOD em {distancia_para_tod:.1f} km")
+                st.caption(f"Alvo: {alt_arr}m | Razão: {descent_rate}m/s")
+                
+            elif distancia_para_tod <= 0:
+                st.error(f"⬇️ **INICIAR PERDA DE ALTITUDE!** Passou {abs(distancia_para_tod):.1f} km")
+                st.caption(f"Mantenha {descent_rate}m/s para interceptar o perfil.")
+            else:
+                # Status de Cruzeiro
+                dist_falta_TOC = TOC_dist - distancia_percorrida_total
+                if dist_falta_TOC > 0:
+                    st.info(f"🏔️ Em Subida. TOC em {dist_falta_TOC:.1f} km")
+                else:
+                    st.info(f"📊 Cruzeiro Estável. Próximo evento: Descida em {distancia_para_tod:.1f} km")
+
+            # --- LÓGICA DE ALERTA DE COMBUSTÍVEL ---
+            tempo_total_restante_seg = sum(leg['tempo'] for leg in pernas_fmc[idx:]) - passado
+            comb_disponivel = st.session_state.get('comb_litros_total', 1000)
+            autonomia_seg = (comb_disponivel / av['consumo_l_min']) * 60
+            
+            if tempo_total_restante_seg > autonomia_seg:
+                st.error("🚨 COMBUSTÍVEL INSUFICIENTE PARA O DESTINO!")
+        
+        # Botões de controle (fora do if do cronômetro para estarem sempre visíveis)
+        with h3:
+            if not st.session_state.cronometro_rodando:
+                if st.button("▶️ START", use_container_width=True):
+                    st.session_state.cronometro_rodando = True
+                    st.session_state.tempo_inicio_perna = time.time()
+                    st.session_state.tempo_inicio_missao_absoluto = time.time()
+                    st.rerun()
+            else:
+                if st.button("⏭️ NEXT", use_container_width=True):
+                    st.session_state.index_perna_ativa += 1
+                    st.session_state.tempo_inicio_perna = time.time()
+                    st.rerun()
+    else:
+        st.success("🏁 Objetivo Atingido!")
+
+fmc_hud_final()
 # ==========================================
 # ABA 5: INTELIGÊNCIA GLOBAL (C4ISR)
 # ==========================================
