@@ -334,82 +334,55 @@ with tab1:
         st.caption(f"Capacidade Máxima: {av['tanque_max_l']} L")
         
 # ==========================================
-# ABA 2: MIRA & VENTO (ESTILO SPIFF ORIGINAL)
+# ABA 2: CONFIGURAÇÃO DA MIRA (LOFTE 7)
 # ==========================================
 with tab2:
-    # --- CSS para Sliders Touch-Friendly (Gordos) ---
+    # CSS para Sliders Touch-Friendly (Gordos para facilitar o uso no tablet/celular)
     st.markdown("""
         <style>
             .stSlider [data-baseweb="slider"] { height: 45px; }
             .stSlider [data-baseweb="thumb"] { height: 40px; width: 40px; background-color: #FF4B4B; }
+            .stMetric { background-color: #1e2124; padding: 15px; border-radius: 10px; border: 1px solid #444; }
         </style>
     """, unsafe_allow_html=True)
 
-    st.header("🎯 Wind & Drift Calculator")
+    st.header("🎯 Ajuste de Vento da Mira")
+    st.caption("Ajuste os valores abaixo para obter os parâmetros de entrada do Lofte 7.")
 
-    # --- INPUTS (OS 4 FATORES DO ORIGINAL) ---
-    col_in1, col_in2 = st.columns(2)
+    # --- INPUTS (OS 3 FATORES ESSENCIAIS) ---
+    # Plane Heading: Sua proa atual
+    phead = st.slider("🧭 PLANE HEADING (°)", 0, 360, 0, step=1)
     
-    with col_in1:
-        phead = st.slider("🧭 PLANE HEADING (°)", 0, 360, 0, step=1)
-        whead = st.slider("🌬️ WIND DIRECTION (FROM °)", 0, 360, 0, step=1)
+    # Wind Direction (FROM): De onde o vento vem no mapa
+    whead = st.slider("🌬️ WIND DIRECTION (FROM °)", 0, 360, 0, step=1)
     
-    with col_in2:
-        wspeed = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.1)
-        # Puxamos a TAS calculada na Aba 1 como padrão, mas permitimos ajuste
-        tas_input = st.slider("✈️ AIRSPEED (km/h)", 100, 500, int(st.session_state.get('vel_calc', 300)), step=5)
+    # Wind Speed: Velocidade do vento no mapa
+    wspeed = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.1)
 
-    # --- MOTOR DE CÁLCULO (LÓGICA EXTRAÍDA DO HTML/JS DO SPIFF) ---
-    tas_ms = tas_input / 3.6
-    # O Spiff calcula o ângulo de diferença em radianos
-    dangle = (phead - whead) * (math.pi / 180)
+    # --- CÁLCULO DO VETOR RELATIVO (LÓGICA SPIFF) ---
+    # O "Sight Wind Hdg" é o ângulo do vento em relação ao nariz do avião
+    # A fórmula inverte o sentido para que o piloto saiba para onde o vento "aponta" no visor
+    sight_wind_hdg = (whead - phead + 360) % 360
     
-    # Velocidades laterais e frontais (Exatamente como no JS)
-    sidespeed = wspeed * math.sin(dangle)
-    headspeed = wspeed * math.cos(dangle)
-    
-    # Cálculo de Deriva (Drift) e Ground Speed (GS)
-    try:
-        # drift = asin(sidespeed / tas) * 180 / PI
-        drift_rad = math.asin(sidespeed / tas_ms)
-        drift_deg = math.degrees(drift_rad)
-        
-        # gs = sqrt(tas² - sidespeed²) - headspeed
-        gs_ms = math.sqrt(tas_ms**2 - sidespeed**2) - headspeed
-        gs_kmh = gs_ms * 3.6
-    except:
-        drift_deg = 0.0
-        gs_kmh = tas_input
+    # No Lofte 7, a velocidade inserida é a velocidade real do vento (m/s)
+    sight_wind_speed = wspeed
 
-    # --- RESULTADOS (IGUAL AO LAYOUT DA IMAGEM D507E2) ---
+    # --- O ÚNICO RESULTADO QUE VOCÊ QUER ---
     st.divider()
     
-    # Primeira Linha de Resultados: Velocidades parciais
-    res_a, res_b = st.columns(2)
-    with res_a:
-        st.metric("SIDE SPEED", f"{abs(sidespeed):.1f} m/s", 
-                  delta=f"{'Direita' if sidespeed > 0 else 'Esquerda' if sidespeed < 0 else 'Nula'}", 
-                  delta_color="off")
-    with res_b:
-        tipo_vento = "Head" if headspeed > 0 else "Tail"
-        st.metric(f"{tipo_vento.upper()} SPEED", f"{abs(headspeed):.1f} m/s")
+    res1, res2 = st.columns(2)
+    
+    with res1:
+        st.metric(label="× Sight Wind Hdg", value=f"{sight_wind_hdg}°")
+        st.caption("Gire o seletor de direção na mira para este valor.")
 
-    # Segunda Linha de Resultados: O que vai na mira
-    res_c, res_d = st.columns(2)
-    with res_c:
-        # No simulador, você ajusta a deriva (Drift)
-        st.subheader("CALCULATED DRIFT")
-        st.markdown(f"## {drift_deg:+.1f}°")
-        
-    with res_d:
-        # A velocidade de solo real
-        st.subheader("CALCULATED GS")
-        st.markdown(f"## {gs_kmh:.0f} km/h")
+    with res2:
+        st.metric(label="× Sight Wind Speed", value=f"{sight_wind_speed} m/s")
+        st.caption("Ajuste a força do vento na engrenagem da mira.")
 
-    # Alerta de correção para o piloto
-    if abs(drift_deg) > 0.1:
-        lado_mira = "DIREITA" if drift_deg > 0 else "ESQUERDA"
-        st.info(f"💡 Gire a mira {abs(drift_deg):.1f}° para a **{lado_mira}**.")
+    # --- DICA TÁTICA ---
+    if sight_wind_speed > 0:
+        st.info(f"💡 Configure sua mira com **{sight_wind_hdg}°** e **{sight_wind_speed} m/s** antes de iniciar o bomb run.")
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
