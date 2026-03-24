@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import math
 import requests
@@ -276,11 +277,10 @@ with st.sidebar:
         v2 = st.session_state.vento_vel_amanha_cb
         d2 = st.session_state.vento_dir_amanha_cb
         t2 = st.session_state.temp_amanha_cb
-        ts = time.strftime('%H:%M:%S')
 
         st.markdown(
             f'<div style="font-family:sans-serif;font-size:12px;line-height:1.6;">'
-            f'<div style="color:#666;margin-bottom:6px;">{ok} API &nbsp;|&nbsp; ⏱ {ts}</div>'
+            f'<div style="color:#666;margin-bottom:6px;">{ok} API sincronizada</div>'
             f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;margin-bottom:8px;">'
             f'<div style="color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:3px;">📅 CAMPANHA</div>'
             f'<div style="color:#eee;font-weight:bold;">{dia_txt}</div>'
@@ -985,7 +985,7 @@ with tab6:
         "rhineland-campaign/rhineland-campaign-mission-planner-latest.json.aspx"
     )
 
-    # Botão discreto para abrir em nova aba
+    # Botão para abrir em nova aba
     st.markdown(
         f'<div style="margin-bottom:5px;">'
         f'<a href="{MAP_URL}" target="_blank" '
@@ -997,75 +997,93 @@ with tab6:
         unsafe_allow_html=True
     )
 
-    st.markdown(f"""
+    # CSS na página pai: bloqueia scroll da página (o scroll do mapa é interno ao iframe)
+    st.markdown("""
         <style>
-        /* Impede qualquer scroll na página — o mapa scrolls internamente no iframe */
         html, body, [data-testid="stApp"],
         [data-testid="stMain"],
-        [data-testid="stMainBlockContainer"] {{
+        [data-testid="stMainBlockContainer"] {
             overflow: hidden !important;
-        }}
-        #map-drag-container {{
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # components.html executa JavaScript de verdade (st.markdown ignora <script>)
+    # O iframe vive dentro deste componente — drag/pan/zoom são eventos internos
+    # O JS usa window.parent para travar o scroll da página pai durante o drag
+    components.html(
+        f"""
+        <style>
+        * {{ margin:0; padding:0; box-sizing:border-box; }}
+        body {{ background:#0e1117; overflow:hidden; }}
+        #wrap {{
             position: relative;
             width: 100%;
-            height: calc(100vh - 8.5rem);
+            height: 100vh;
             user-select: none;
         }}
-        #map-iframe {{
+        #mapframe {{
             display: block;
             border: none;
             width: 100%;
             height: 100%;
         }}
-        /* Overlay invisível que cobre o iframe durante o drag,
-           mantendo os eventos de mouse na página pai */
-        #map-drag-overlay {{
+        #overlay {{
             display: none;
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 10;
+            inset: 0;
+            z-index: 99;
             cursor: grabbing;
-            background: transparent;
         }}
         </style>
 
-        <div id="map-drag-container">
-            <iframe id="map-iframe" src="{MAP_URL}" allow="fullscreen"></iframe>
-            <div id="map-drag-overlay"></div>
+        <div id="wrap">
+            <iframe id="mapframe" src="{MAP_URL}" allow="fullscreen"></iframe>
+            <div id="overlay"></div>
         </div>
 
         <script>
         (function() {{
-            var container = document.getElementById('map-drag-container');
-            var overlay   = document.getElementById('map-drag-overlay');
-            var dragging  = false;
+            var overlay  = document.getElementById('overlay');
+            var dragging = false;
 
-            // Quando o mouse entra no container do iframe e pressiona botão
-            container.addEventListener('mousedown', function(e) {{
+            function lockParentScroll() {{
+                try {{
+                    // Trava scroll da página pai do Streamlit
+                    window.parent.document.documentElement.style.overflow = 'hidden';
+                    window.parent.document.body.style.overflow = 'hidden';
+                    window.parent.scrollTo(0, 0);
+                }} catch(e) {{}}
+            }}
+
+            document.getElementById('wrap').addEventListener('mousedown', function() {{
                 dragging = true;
                 overlay.style.display = 'block';
-                // Bloqueia scroll da página durante o drag
-                document.body.style.overflow = 'hidden';
+                lockParentScroll();
             }});
 
-            // Quando o mouse solta em qualquer lugar da página
-            window.addEventListener('mouseup', function(e) {{
+            window.addEventListener('mouseup', function() {{
                 if (dragging) {{
                     dragging = false;
                     overlay.style.display = 'none';
-                    document.body.style.overflow = 'hidden';
+                    lockParentScroll();
                 }}
             }});
 
-            // Garante que wheel/scroll nunca chega à página
-            container.addEventListener('wheel', function(e) {{
-                e.stopPropagation();
-            }}, {{ passive: true }});
+            // Trava contínua: qualquer scroll da página pai é cancelado
+            window.parent.addEventListener('scroll', function() {{
+                window.parent.scrollTo(0, 0);
+            }}, true);
 
-            // Previne qualquer scroll acidental da página
-            document.addEventListener('scroll', function(e) {{
-                window.scrollTo(0, 0);
-            }});
+            // Previne scroll da página pai via roda do mouse sobre o iframe
+            window.parent.document.addEventListener('wheel', function(e) {{
+                e.preventDefault();
+            }}, {{ passive: false, capture: true }});
+
+            lockParentScroll();
         }})();
         </script>
-    """, unsafe_allow_html=True)
+        """,
+        height=820,
+        scrolling=False
+    )
