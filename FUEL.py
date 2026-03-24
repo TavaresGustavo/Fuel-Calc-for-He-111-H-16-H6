@@ -588,84 +588,120 @@ def fmc_hud_final():
 
 fmc_hud_final()
 # ==========================================
-# ABA 5: INTELIGÊNCIA TÁTICA (C4ISR)
+# ABA 5: INTELIGÊNCIA TÁTICA (C4ISR) - COMPLETO
 # ==========================================
 with tab5:
-    st.header("🌐 Inteligência Tática e Logística")
+    st.header("🌐 Inteligência Tática e Logística (C4ISR)")
     
     if not st.session_state.get('dados_campanha'):
-        st.warning("📡 Sincronize com o Combat Box para carregar dados estratégicos.")
+        st.warning("📡 Aguardando sincronização com o servidor do Combat Box...")
     else:
         dados = st.session_state.dados_campanha
-        
-        # --- 1. BRIEFING (Sempre no topo) ---
-        texto_hoje = dados.get('CurrentDayStateDescription', '')
-        if texto_hoje:
-            st.info(f"**Briefing do Comando:**\n\n{traduzir_texto(texto_hoje)}")
-        
-        st.divider()
-
-        # --- 2. FILTRAGEM TÉCNICA DE AERÓDROMOS ---
         airfields = dados.get('Airfields', [])
         
-        # AQUI ESTÁ A MÁGICA: Filtramos apenas quem é operacional e tem hangar ativo
-        def filtrar_bases(lista, coalizao):
-            return [
-                b for b in lista 
-                if b.get('Coalition') in coalizao 
-                and b.get('IsOperational') == True 
-                and len(b.get('AvailableAirframes', [])) > 0
-            ]
-
-        aliados_ativos = filtrar_bases(airfields, ['Allies', 'Allied'])
-        eixo_ativos = filtrar_bases(airfields, ['Axis'])
-
-        st.subheader(f"🛫 Bases de Operação Disponíveis (Respawn Ativo)")
+        # --- 1. BRIEFING DO COMANDO (TRADUZIDO) ---
+        st.subheader("📜 Relatórios de Operações")
+        texto_hoje = dados.get('CurrentDayStateDescription', '')
+        if texto_hoje:
+            st.info(f"**Briefing do Dia:**\n\n{traduzir_texto(texto_hoje)}")
         
+        with st.expander("Ver Resumo das Operações Anteriores"):
+            texto_ontem = dados.get('PreviousDaysEventsDescription', '')
+            st.write(traduzir_texto(texto_ontem) if texto_ontem else "Sem registros adicionais.")
+        
+        st.divider()
+
+        # --- 2. LÓGICA DE FILTRAGEM ROBUSTA (AIRFIELDS) ---
+        def filtrar_bases_operacionais(lista, coalizao_alvo):
+            resultado = []
+            for b in lista:
+                # Normalização de Coalizão (Case Insensitive)
+                b_coal = str(b.get('Coalition', '')).strip().lower()
+                alvos = [c.lower() for c in coalizao_alvo]
+                
+                if b_coal in alvos:
+                    # Cheque de Operacionalidade (aceita booleano ou string)
+                    is_op = b.get('IsOperational')
+                    status_op = str(is_op).lower() in ['true', '1']
+                    
+                    # Cheque de Hangar (Só mostra se houver aviões disponíveis)
+                    hangar = b.get('AvailableAirframes', [])
+                    
+                    if status_op and len(hangar) > 0:
+                        resultado.append(b)
+            return resultado
+
+        aliados_ativos = filtrar_bases_operacionais(airfields, ['Allies', 'Allied'])
+        eixo_ativos = filtrar_bases_operacionais(airfields, ['Axis'])
+
+        # --- 3. EXIBIÇÃO DE AERÓDROMOS (LOGÍSTICA) ---
+        st.subheader("🛫 Gestão de Aeródromos Operacionais")
         col_all_b, col_ax_b = st.columns(2)
 
-        # Lógica de Hangar (com a regra do -1 = Unlimited)
-        def render_hangar(base):
-            avioes = base.get('AvailableAirframes', [])
-            if avioes:
-                for av in avioes:
+        def render_hangar_logic(base):
+            hangar = base.get('AvailableAirframes', [])
+            if hangar:
+                st.caption("Aeronaves em Hangar:")
+                for av in hangar:
+                    tipo = av.get('Type', 'Aeronave')
                     qtd = int(av.get('NumberAvailable', 0))
+                    # REGRA TÉCNICA: -1 significa UNLIMITED
                     txt_qtd = "♾️ ILIMITADO" if qtd == -1 else f"{qtd} unid."
-                    st.write(f"- {av.get('Type')}: **{txt_qtd}**")
+                    st.write(f"- {tipo}: **{txt_qtd}**")
             else:
-                st.caption("Hangar indisponível.")
+                st.write("Sem estoque de aeronaves.")
 
+        # COLUNA ALIADOS
         with col_all_b:
-            st.markdown("### 🔵 Allies Airfields")
+            st.markdown("### 🔵 ALLIES BASES")
+            if not aliados_ativos: st.caption("Nenhuma base aliada operacional.")
             for b in aliados_ativos:
-                with st.expander(f"📍 {b.get('Name')} ({b.get('SupplyLevel', 0)}/200)"):
-                    st.progress(min(1.0, b.get('SupplyLevel', 0) / 200.0))
-                    render_hangar(b)
+                nome = b.get('Name')
+                sup = b.get('SupplyLevel', 0)
+                # Escala 200 para progresso (0.0 a 1.0)
+                prog = min(1.0, sup / 200.0)
+                
+                with st.expander(f"📍 {nome} ({sup}/200)"):
+                    st.progress(prog)
+                    st.write(f"**Pista:** {'🛣️ Concreto' if b.get('RunwayIsConcrete') else '🌱 Grama'}")
+                    render_hangar_logic(b)
 
-        with col_ax_b:
-            st.markdown("### 🔴 Axis Airfields")
+        # COLUNA EIXO
+        with col_axis_b:
+            st.markdown("### 🔴 AXIS BASES")
+            if not eixo_ativos: st.error("⚠️ Nenhuma base operacional do Eixo detectada.")
             for b in eixo_ativos:
-                alerta = "⚠️ " if b.get('SupplyLevel', 0) < 20 else ""
-                with st.expander(f"{alerta}📍 {b.get('Name')} ({b.get('SupplyLevel', 0)}/200)"):
-                    st.progress(min(1.0, b.get('SupplyLevel', 0) / 200.0))
-                    render_hangar(b)
+                nome = b.get('Name')
+                sup = b.get('SupplyLevel', 0)
+                prog = min(1.0, sup / 200.0)
+                # Alerta visual se suprimento crítico (abaixo de 10%)
+                alerta = "🚨 " if sup < 20 else ""
+                
+                with st.expander(f"{alerta}📍 {nome} ({sup}/200)"):
+                    st.progress(prog)
+                    st.write(f"**Pista:** {'🛣️ Concreto' if b.get('RunwayIsConcrete') else '🌱 Grama'}")
+                    render_hangar_logic(b)
 
         st.divider()
 
-        # --- 3. OBJETIVOS (Separados por Eixo/Aliado) ---
-        st.subheader("🎯 Objetivos Estratégicos Ativos")
-        objetivos = [o for o in dados.get('Objectives', []) if o.get('ActiveToday')]
+        # --- 4. OBJETIVOS ESTRATÉGICOS (SEPARADOS) ---
+        st.subheader("🎯 Objetivos e Alvos Prioritários")
+        objetivos_ativos = [o for o in dados.get('Objectives', []) if o.get('ActiveToday')]
         
         col_all_obj, col_ax_obj = st.columns(2)
-        
+
         with col_all_obj:
             st.markdown("### 🔵 Allies Targets")
-            for o in [obj for obj in objetivos if obj.get('Coalition') in ['Allies', 'Allied']]:
+            allies_o = [o for o in objetivos_ativos if str(o.get('Coalition', '')).lower() in ['allies', 'allied']]
+            if not allies_o: st.caption("Sem alvos aliados ativos.")
+            for o in allies_o:
                 st.markdown(f":blue[🎯 **{o.get('Name')}**]")
                 st.caption(traduzir_texto(o.get('Description', '')))
 
         with col_ax_obj:
             st.markdown("### 🔴 Axis Targets")
-            for o in [obj for obj in objetivos if obj.get('Coalition') == 'Axis']:
+            axis_o = [o for o in objetivos_ativos if str(o.get('Coalition', '')).lower() == 'axis']
+            if not axis_o: st.caption("Sem alvos do eixo ativos.")
+            for o in axis_o:
                 st.markdown(f":red[🎯 **{o.get('Name')}**]")
                 st.caption(traduzir_texto(o.get('Description', '')))
