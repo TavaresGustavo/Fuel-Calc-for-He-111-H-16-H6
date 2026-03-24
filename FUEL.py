@@ -88,11 +88,43 @@ def fetch_combatbox_data():
 # 2. BASE DE DADOS: Aeronaves e Mapas
 # ==========================================
 db_altitudes_tecnico = {
-    "Antwerp-Deurne (B52)": 12, "Brussels-Evere (B56)": 55, "Eindhoven (B78)": 20,
-    "Gilze-Rijen (B77)": 15, "Heesch (B88)": 7, "Hopsten": 42, "Münster-Handorf": 48,
-    "Rheine-Bentlage": 35, "Sint-Truiden (B55)": 75, "Ursel (B67)": 29, 
-    "Volkel (B80)": 14, "Wesel": 25, "Venlo": 30, "Helmond (B86)": 20,
-    "Deelen": 48, "Handorf": 48, "Achmer": 54, "Eversheide": 40, "Metz": 165
+    # Captura 1
+    "Aachen": 190,
+    "Achmer": 54,
+    "Bad Lippspringe": 140,
+    # Captura 2
+    "Breitscheid": 558,
+    "Chievres": 59,
+    "Coesfeld-Lette": 80,
+    "Deelen": 48,
+    "Deurne": 12,
+    "Diest (B-64)": 27,
+    "Dortmund": 129,
+    # Captura 3
+    "Eudenbach": 360,
+    "Florennes": 285,
+    "Gilze-Rijen": 15,
+    "Greven": 48,
+    "Guetersloh": 80,
+    "Kirchhellen": 67,
+    "Liege (A-93)": 201,
+    # Captura 4
+    "Limburg": 31,
+    "Melsbroek": 56,
+    "Nivelles (B-75)": 103,
+    "Petit Brogel": 61,
+    "Plantluenne": 35,
+    "Quackenbrueck": 24,
+    "Schiphol": 0,  # Real é -3m, mas usamos 0 para evitar erros de cálculo
+    "Sint-Denijs-Westrem": 8,
+    # Captura 5
+    "Soesterberg": 20,
+    "Stoermede": 90,
+    "Strassfeld": 161,
+    "Twente": 35,
+    "Venlo": 30,
+    "Volkel": 14,
+    "Woensdrecht": 19
 }
 
 # ==========================================
