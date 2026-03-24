@@ -95,13 +95,6 @@ db_altitudes_tecnico = {
     "Deelen": 48, "Handorf": 48, "Achmer": 54, "Eversheide": 40, "Metz": 165
 }
 
-Ótimo que o NameError foi resolvido, Gustavo! Como você é da área de TI, sabe que em uma refatoração de código, às vezes "limpamos" demais o schema e acabamos perdendo metadados importantes.
-
-Para garantir que o seu sistema tenha a fidelidade total de performance, pesos e armamentos, aqui está o Database (DB) Completo e Unificado. Ele já inclui os novos campos de subida/descida (VNAV) e as chaves longas que evitam os erros de KeyError que tivemos.
-
-Copie este bloco e substitua a sua db_avioes atual:
-
-Python
 # ==========================================
 # 2. BASE DE DADOS COMPLETA: AERONAVES (C4ISR)
 # ==========================================
