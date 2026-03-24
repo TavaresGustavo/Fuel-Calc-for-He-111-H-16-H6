@@ -588,7 +588,7 @@ def fmc_hud_final():
 
 fmc_hud_final()
 # ==========================================
-# ABA 5: INTELIGÊNCIA GLOBAL (C4ISR)
+# ABA 5: INTELIGÊNCIA GLOBAL (C4ISR) - ATUALIZADA
 # ==========================================
 with tab5:
     st.header("🌐 Inteligência Tática e Logística")
@@ -599,92 +599,102 @@ with tab5:
         # --- 1. BRIEFING DO COMANDO (TRADUZIDO) ---
         st.subheader("📜 Relatório de Operações")
         texto_hoje = dados.get('CurrentDayStateDescription', '')
-        texto_ontem = dados.get('PreviousDaysEventsDescription', '')
-        
         if texto_hoje:
-            with st.container():
-                st.info(f"**Briefing Atual:**\n\n{traduzir_texto(texto_hoje)}")
-        
-        if texto_ontem:
-            with st.expander("Ver Resumo das Operações Anteriores"):
-                st.write(traduzir_texto(texto_ontem))
+            st.info(f"**Briefing Atual:**\n\n{traduzir_texto(texto_hoje)}")
         
         st.divider()
         
-        # --- 2. OBJETIVOS E INFRAESTRUTURA ---
+        # --- 2. DASHBOARD E ESTRUTURA ---
         col_obj, col_base = st.columns([1, 1])
         
         with col_obj:
             st.subheader("🎯 Objetivos Estratégicos")
-            st.caption("Alvos ativos para a missão atual")
-            
             objetivos = dados.get('Objectives', [])
             objetivos_ativos = [o for o in objetivos if o.get('ActiveToday') == True]
             
             if objetivos_ativos:
-                for obj in objetivos_ativos[:10]: # Mostra os 10 principais
-                    # Filtro de Coalizão Robusto
+                for obj in objetivos_ativos[:10]:
                     coal = str(obj.get('Coalition', '')).strip().lower()
-                    if coal in ['allied', 'allies']:
-                        icone = "🔵 Aliado"
-                    elif coal == 'axis':
-                        icone = "🔴 Eixo"
-                    else:
-                        icone = "⚪ Neutro"
-                    
+                    cor = "blue" if coal in ['allied', 'allies'] else "red" if coal == 'axis' else "gray"
                     tipo = traduzir_texto(obj.get('Type', 'Instalação'))
-                    st.error(f"**{obj.get('Name', 'Alvo')}** ({tipo}) - {icone}")
+                    st.markdown(f":{cor}[**{obj.get('Name')}**] ({tipo})")
             else:
-                st.write("Nenhum objetivo terrestre prioritário listado.")
+                st.write("Sem objetivos prioritários.")
 
         with col_base:
-            st.subheader("🛫 Gestão de Aeródromos")
+            st.subheader("🛫 Inteligência de Aeródromos")
             airfields = dados.get('Airfields', [])
             
             if airfields:
-                lista_nomes_bases = [b.get('Name', 'Base') for b in airfields]
-                base_selecionada = st.selectbox("Inspecionar Base:", lista_nomes_bases)
+                # --- DIFERENCIAÇÃO DE DISPONIBILIDADE ---
+                # Criamos uma lista formatada para o selectbox que já mostra o status
+                opcoes_bases = []
+                for b in airfields:
+                    nome = b.get('Name', 'Base')
+                    coal = b.get('Coalition', 'Neutral')
+                    sup = b.get('SupplyLevel', 0)
+                    
+                    # Define o prefixo por Coalizão (Baseado nas tags do server)
+                    prefixo = "🔵" if coal in ['Allied', 'Allies'] else "🔴" if coal == 'Axis' else "⚪"
+                    
+                    # Identifica se a base está "Inutilizável" (Sem suprimentos ou Neutra)
+                    status_logistico = " [ESGOTADA]" if sup <= 0 else ""
+                    if coal == 'Neutral': status_logistico = " [INATIVA]"
+                    
+                    opcoes_bases.append({
+                        "id": nome,
+                        "label": f"{prefixo} {nome}{status_logistico} - {sup}% Sup.",
+                        "coalition": coal
+                    })
                 
-                # Localiza os dados da base escolhida
-                b_dados = next((b for b in airfields if b.get('Name') == base_selecionada), None)
+                # Ordenar para colocar as bases do Eixo (ou sua coalizão) no topo
+                opcoes_bases.sort(key=lambda x: (x['coalition'] != 'Axis', x['id']))
+                
+                selecao = st.selectbox(
+                    "Selecionar Base para Inteligência:",
+                    options=[opt['id'] for opt in opcoes_bases],
+                    format_func=lambda x: next(o['label'] for o in opcoes_bases if o['id'] == x)
+                )
+                
+                # Localiza os dados da base selecionada
+                b_dados = next((b for b in airfields if b.get('Name') == selecao), None)
                 
                 if b_dados:
-                    # --- Status de Alerta ---
-                    sob_ataque = b_dados.get('UnderAttack', False) or b_dados.get('IsUnderAttack', False)
-                    if sob_ataque:
-                        st.error("🚨 **ALERTA: BASE SOB ATAQUE INIMIGO!** 🚨")
-                    else:
-                        st.success("✅ **Status: Base Segura**")
+                    # Diferenciação visual de disponibilidade no cabeçalho
+                    if b_dados.get('Coalition') == 'Neutral':
+                        st.warning(f"⚠️ **BASE NEUTRA:** Uso não autorizado para logística.")
+                    elif b_dados.get('SupplyLevel', 0) <= 0:
+                        st.error(f"❌ **BASE DESUPRIDA:** Rearmamento e reabastecimento indisponíveis.")
                     
-                    st.divider()
-                    
-                    # --- Dados da Pista ---
-                    brg = b_dados.get('RunwayBearing', 0)
-                    is_conc = b_dados.get('RunwayIsConcrete', False)
-                    tipo_piso = "🛣️ Concreto / Asfalto" if is_conc else "🌱 Grama / Terra"
-                    
-                    st.caption("Configuração da Pista")
-                    st.write(f"**Proa (QDM):** {brg:03.0f}° / {(brg + 180) % 360:03.0f}°")
-                    st.write(f"**Superfície:** {tipo_piso}")
-                    
-                    # --- Nível de Suprimentos (Barra Visual) ---
-                    sup_val = max(0, min(100, int(b_dados.get('SupplyLevel', 0))))
-                    st.progress(sup_val / 100.0, text=f"📦 Logística / Suprimentos: {sup_val}%")
-                    
-                    st.divider()
-                    
-                    # --- Inventário do Hangar ---
-                    st.caption("Aeronaves em Stock")
-                    avioes_hangar = b_dados.get('AvailableAirframes', [])
-                    if avioes_hangar:
-                        for av in avioes_hangar:
-                            nome_av = av.get('Type', 'Aeronave')
-                            qtd = av.get('NumberAvailable', 0)
-                            st.write(f"- {nome_av}: **{qtd}** unid.")
-                    else:
-                        st.write("Sem aeronaves disponíveis nesta base.")
-            else:
-                st.info("Nenhum dado de aeródromo recebido do servidor.")
+                    # Status de Ataque
+                    if b_dados.get('UnderAttack'):
+                        st.error("🚨 **ALERTA: BASE SOB ATAQUE INIMIGO!**")
+
+                    # Grid de Dados Técnicos
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        brg = b_dados.get('RunwayBearing', 0)
+                        st.write(f"**Proa:** {brg:03d}° / {(brg+180)%360:03d}°")
+                        st.write(f"**Piso:** {'🛣️ Concreto' if b_dados.get('RunwayIsConcrete') else '🌱 Grama'}")
+                    with c2:
+                        alt = db_altitudes_tecnico.get(selecao, "50") # Usa seu DB de alturas
+                        st.write(f"**Altitude:** {alt}m")
+                        st.write(f"**Coalizão:** {b_dados.get('Coalition')}")
+
+                    # Barra de Suprimentos (Destaque para o que você viu no print: 1/200)
+                    sup_val = b_dados.get('SupplyLevel', 0)
+                    cor_barra = "red" if sup_val < 20 else "orange" if sup_val < 50 else "green"
+                    st.markdown(f"**Estoque de Suprimentos:** {sup_val}%")
+                    st.progress(sup_val / 100)
+
+                    # Hangar
+                    with st.expander("📦 Aeronaves Disponíveis no Hangar"):
+                        hangar = b_dados.get('AvailableAirframes', [])
+                        if hangar:
+                            for av in hangar:
+                                st.write(f"- {av.get('Type')}: **{av.get('NumberAvailable')}**")
+                        else:
+                            st.write("Hangar vazio ou acesso negado.")
 
     else:
-        st.warning("📡 Aguardando sincronização com o servidor do Combat Box para carregar dados de inteligência...")
+        st.warning("📡 Sincronize com o Combat Box para carregar o C4ISR.")
