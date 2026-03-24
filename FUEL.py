@@ -30,6 +30,89 @@ if 'dist_calc' not in st.session_state: st.session_state.dist_calc = 250.0
 if 'usar_dados_importados' not in st.session_state: st.session_state.usar_dados_importados = False
 if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = None
 
+# ==========================================
+# 1. MOTOR DE DADOS E TRADUÇÃO
+# ==========================================
+@st.cache_data(ttl=3600)
+def traduzir_texto(texto):
+    if not texto or texto.strip() == "": return ""
+    try:
+        return GoogleTranslator(source='en', target='pt').translate(texto)
+    except: return texto
+
+def fetch_combatbox_data():
+    try:
+        api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
+        r = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
+        if r.status_code == 200:
+            dados = r.json()
+            st.session_state.dados_campanha = dados
+            w = dados.get("Weather", {})
+            st.session_state.temp_cb = float(w.get("Temperature", 15.0))
+            st.session_state.vento_vel_cb = float(w.get("WindAtGroundLevel", {}).get("Speed", 5.0))
+            st.session_state.vento_dir_cb = float(w.get("WindAtGroundLevel", {}).get("Bearing", 45.0))
+            st.session_state.nuvens_hoje_cb = w.get("CloudDescription", "N/D")
+            st.session_state.status_cb = "✅ API Sincronizada!"
+    except: st.session_state.status_cb = "❌ Erro de Conexão"
+
+
+# ==========================================
+# 2. BASE DE DADOS: Pesos e Aeronaves
+# ==========================================
+peso_bombas = {"SC 50": 50, "SC 250": 250, "SC 500": 500, "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400}
+
+db_avioes = {
+    "He-111 H-6": {
+        "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
+        "armamento_fixo": "6 x 7.92 mm MG-15",
+        "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147, "Ambas": 193},
+        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "4x SC 250": 1000, "2x SC 1000": 2180}
+    },
+    "He-111 H-16": {
+        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
+        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "4x SC 250": 1000, "8x SC 250": 2000, "2x SC 500": 1000, "2x SC 1800": 3560, "1x SC 2500": 2400}
+    },
+    "Ju-52/3M": {
+        "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
+        "armamento_fixo": "Transporte",
+        "modificacoes": {"Padrão": 0, "Torre Traseira": 130, "Carga Interna (2300kg)": 2300, "12 Paraquedistas (1200kg)": 1200},
+        "presets_bombas": {"Vazio": 0, "10x MAB 250": 2550}
+    },
+    "Ju-88 A-4": {
+        "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
+        "armamento_fixo": "1x 13mm | 4x 7.92mm",
+        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Inferior": -123},
+        "presets_bombas": {"Vazio": 0, "10x SC 50": 500, "4x SC 250": 1000, "4x SC 500": 2000}
+    }
+}
+
+# ==========================================
+# 3. INTERFACE E BARRA LATERAL
+# ==========================================
+st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide")
+st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.header("📡 Comando e Controlo")
+    st.markdown("Telemetria em tempo real (Atualiza a cada 60s).")
+    
+    @st.fragment(run_every="60s")
+    def painel_telemetria_ativo():
+        fetch_combatbox_data()
+        st.info(st.session_state.status_cb)
+        st.divider()
+        st.markdown("**METEOROLOGIA: MISSÃO ATUAL**")
+        st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
+        st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
+        st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
+        st.caption(f"⏱️ Última sincronização: {time.strftime('%H:%M:%S')}")
+        
+    painel_telemetria_ativo()
+
+st.title("🛩️ Painel Tático C4ISR")
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog & E6B", "🚀 FMC (Ativo)", "🌐 Inteligência"])
 
 # ==========================================
 # ABA 1: HANGAR (LOGÍSTICA E PREPARAÇÃO)
@@ -137,108 +220,6 @@ with tab1:
 
     st.divider()
     st.markdown(f"**Resumo Técnico:** {av_nome} com {mod_escolhida} e {bomba_escolhida}.")
-    
-# ==========================================
-# 2. BASE DE DADOS: Pesos e Aeronaves
-# ==========================================
-peso_bombas = {"SC 50": 50, "SC 250": 250, "SC 500": 500, "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400}
-
-db_avioes = {
-    "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
-        "armamento_fixo": "6 x 7.92 mm MG-15",
-        "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147, "Ambas": 193},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "4x SC 250": 1000, "2x SC 1000": 2180}
-    },
-    "He-111 H-16": {
-        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
-        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
-        "modificacoes": {"Padrão": 0},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "4x SC 250": 1000, "8x SC 250": 2000, "2x SC 500": 1000, "2x SC 1800": 3560, "1x SC 2500": 2400}
-    },
-    "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
-        "armamento_fixo": "Transporte",
-        "modificacoes": {"Padrão": 0, "Torre Traseira": 130, "Carga Interna (2300kg)": 2300, "12 Paraquedistas (1200kg)": 1200},
-        "presets_bombas": {"Vazio": 0, "10x MAB 250": 2550}
-    },
-    "Ju-88 A-4": {
-        "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
-        "armamento_fixo": "1x 13mm | 4x 7.92mm",
-        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Inferior": -123},
-        "presets_bombas": {"Vazio": 0, "10x SC 50": 500, "4x SC 250": 1000, "4x SC 500": 2000}
-    }
-}
-
-# ==========================================
-# 3. INTERFACE E BARRA LATERAL
-# ==========================================
-st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide")
-st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
-
-with st.sidebar:
-    st.header("📡 Comando e Controlo")
-    st.markdown("Telemetria em tempo real (Atualiza a cada 60s).")
-    
-    @st.fragment(run_every="60s")
-    def painel_telemetria_ativo():
-        fetch_combatbox_data()
-        st.info(st.session_state.status_cb)
-        st.divider()
-        st.markdown("**METEOROLOGIA: MISSÃO ATUAL**")
-        st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
-        st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
-        st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
-        st.caption(f"⏱️ Última sincronização: {time.strftime('%H:%M:%S')}")
-        
-    painel_telemetria_ativo()
-
-st.title("🛩️ Painel Tático C4ISR")
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog & E6B", "🚀 FMC (Ativo)", "🌐 Inteligência"])
-
-# ==========================================
-# ABA 1: HANGAR & IMPORTAÇÃO
-# ==========================================
-with tab1:
-    col_file, col_clear = st.columns([3, 1])
-    with col_file:
-        arquivo_plano = st.file_uploader("📥 Importar Plano (.json)", type=["json"])
-    with col_clear:
-        if st.button("🗑️ Limpar Rota", use_container_width=True):
-            st.session_state.navlog_manual = []
-            st.session_state.usar_dados_importados = False
-            st.rerun()
-    
-    if arquivo_plano is not None:
-        file_content = arquivo_plano.getvalue()
-        current_hash = hash(file_content)
-        
-        if st.session_state.last_file_hash != current_hash:
-            st.session_state.last_file_hash = current_hash
-            try:
-                dados_plano = json.loads(file_content)
-                
-                # Suporta formato Mission Planner ou o nosso formato nativo
-                if "routes" in dados_plano: # Formato Mission Planner
-                    rota = dados_plano["routes"][0]
-                    coords = rota["latLngs"]
-                    navlog_temp = []
-                    dist_total = 0
-                    for i in range(len(coords)-1):
-                        dx, dy = coords[i+1]['lng'] - coords[i]['lng'], coords[i+1]['lat'] - coords[i]['lat']
-                        dist = math.hypot(dx, dy) * 3.0
-                        dist_total += dist
-                        tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
-                        navlog_temp.append({"Perna": f"WP{i}➔WP{i+1}", "Distância (km)": round(dist, 1), "Rumo (TC)": round(tc_deg, 0)})
-                    st.session_state.navlog_manual = navlog_temp
-                    st.session_state.dist_calc = dist_total
-                else: # Nosso formato nativo
-                    st.session_state.navlog_manual = dados_plano
-                    st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
-                
-                st.session_state.usar_dados_importados = True
-                st.success("✅ Plano carregado com sucesso!")
-            except: st.error("Erro ao processar o ficheiro JSON.")
 
 # ==========================================
 # ABA 2: LOTFE 7
@@ -360,7 +341,7 @@ with tab3:
             st.warning(f"**{val_conv} metros** = {val_conv * 3.28084:.0f} pés")
             st.warning(f"**{val_conv} pés** = {val_conv / 3.28084:.0f} metros")
 
-# ==========================================
+
 # ==========================================
 # ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER) - COMPLETO
 # ==========================================
