@@ -9,25 +9,29 @@ from deep_translator import GoogleTranslator
 # ==========================================
 # 0. INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE)
 # ==========================================
+# Variáveis de Meteorologia
 if 'vento_vel_cb' not in st.session_state: st.session_state.vento_vel_cb = 5.0
 if 'vento_dir_cb' not in st.session_state: st.session_state.vento_dir_cb = 45.0
 if 'temp_cb' not in st.session_state: st.session_state.temp_cb = 15.0
-if 'nuvens_hoje_cb' not in st.session_state: st.session_state.nuvens_hoje_cb = "Desconhecido"
-
-if 'vento_vel_amanha_cb' not in st.session_state: st.session_state.vento_vel_amanha_cb = 5.0
-if 'vento_dir_amanha_cb' not in st.session_state: st.session_state.vento_dir_amanha_cb = 45.0
-if 'temp_amanha_cb' not in st.session_state: st.session_state.temp_amanha_cb = 15.0
-if 'nuvens_amanha_cb' not in st.session_state: st.session_state.nuvens_amanha_cb = "Desconhecido"
-
 if 'status_cb' not in st.session_state: st.session_state.status_cb = "A aguardar sincronização..."
 if 'dados_campanha' not in st.session_state: st.session_state.dados_campanha = None
 
-# Memória Híbrida do NavLog
+# Memória do NavLog e FMC (O QUE ESTAVA A FALTAR)
 if 'navlog_manual' not in st.session_state:
     st.session_state.navlog_manual = [{"Perna": "Base ➔ Alvo", "Distância (km)": 50.0, "Rumo (TC)": 90.0}]
+
+if 'index_perna_ativa' not in st.session_state: 
+    st.session_state.index_perna_ativa = 0
+
+if 'cronometro_rodando' not in st.session_state: 
+    st.session_state.cronometro_rodando = False
+
+if 'tempo_inicio_perna' not in st.session_state: 
+    st.session_state.tempo_inicio_perna = None
+
+# Controlo de Ficheiros e Cálculos
 if 'vel_calc' not in st.session_state: st.session_state.vel_calc = 320.0
 if 'dist_calc' not in st.session_state: st.session_state.dist_calc = 250.0
-if 'usar_dados_importados' not in st.session_state: st.session_state.usar_dados_importados = False
 if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = None
 
 # ==========================================
