@@ -337,63 +337,65 @@ with tab1:
 # ABA 2: MIRA DE BOMBARDEIO (LOFTE 7)
 # ==========================================
 with tab2:
-    st.header("🎯 Calculadora de Mira (Bomb Sight)")
-    st.markdown("Cálculo de ângulo para o visor **Lofte 7** do He-111.")
+    st.header("🎯 Calculadora de Mira (Lofte 7)")
+    st.markdown("Física de queda livre sincronizada com o padrão *Spiff's Calculator*.")
 
     # --- INPUTS TÉCNICOS ---
-    col_input1, col_input2 = st.columns(2)
+    col_inp1, col_inp2 = st.columns(2)
     
-    with col_input1:
-        # Puxa o valor do FMC ou NavLog se disponível para agilizar
+    with col_inp1:
+        # Altitude de voo (ASL)
         alt_voo = st.number_input("Altitude de Voo (m)", value=4000, step=100)
+        # Elevação do terreno no alvo
         elev_alvo = st.number_input("Elevação do Alvo (m)", value=0, step=10)
-        gs_kmh = st.number_input("Velocidade de Solo (GS km/h)", value=300, step=10)
+        # Velocidade em relação ao solo (GS)
+        gs_kmh = st.number_input("Velocidade de Solo (GS km/h)", value=300, step=5)
     
-    with col_input2:
-        # V.S. é crucial se você não estiver em voo perfeitamente nivelado
-        vs_ms = st.number_input("Velocidade Vertical (m/s)", value=0.0, step=0.5, 
-                                 help="0 para voo nivelado. Use (+) para subida e (-) para descida.")
-        st.info("💡 A Ground Speed (GS) já deve considerar o efeito do vento.")
+    with col_inp2:
+        # Velocidade vertical (crucial para precisão em ataques não nivelados)
+        vs_ms = st.number_input("Velocidade Vertical (m/s)", value=0.0, step=0.1, 
+                                 help="0 para voo nivelado. Positivo (+) para subida, Negativo (-) para descida.")
+        st.info("💡 A GS e a Altitude podem ser puxadas automaticamente do FMC (Aba 4).")
 
-    # --- CÁLCULO FÍSICO ---
-    # 1. Altitude Relativa (h)
-    h_rel = alt_voo - elev_alvo
-    g = 9.80665 # Gravidade padrão
+    # --- MOTOR DE CÁLCULO BALÍSTICO ---
+    # 1. Constantes e Conversões
+    g = 9.80665  # Gravidade padrão (m/s²)
+    h_relativa = alt_voo - elev_alvo  # Altura real acima do alvo
+    v_horizontal_ms = gs_kmh / 3.6    # GS convertida para m/s
     
-    if h_rel > 0:
-        # 2. Conversão de GS para metros por segundo
-        v_ms = gs_kmh / 3.6
-        
-        # 3. Tempo de Queda (t) considerando velocidade vertical (Fórmula Cinética)
-        # h = (vs * t) + (0.5 * g * t^2) -> Resolvendo para t (Bhaskara)
-        # No bombardeio nivelado (vs=0), t = sqrt(2h/g)
-        termo_raiz = (vs_ms**2) + (2 * g * h_rel)
+    if h_relativa > 0:
+        # 2. Cálculo do Tempo de Queda (t) considerando V.S.
+        # Usamos a equação horária do espaço: h = (vs * t) + (0.5 * g * t²)
+        # Resolvendo a equação quadrática para t:
+        # 0.5gt² + vs*t - h = 0
+        termo_raiz = (vs_ms**2) + (2 * g * h_relativa)
         tempo_queda = (-vs_ms + math.sqrt(termo_raiz)) / g
         
-        # 4. Distância Horizontal percorrida pela bomba (D)
-        distancia_horizontal = v_ms * tempo_queda
+        # 3. Distância de Avanço (D)
+        distancia_horizontal = v_horizontal_ms * tempo_queda
         
-        # 5. Ângulo de Lançamento (Alpha) em graus
-        # tan(alpha) = D / h
-        angulo_rad = math.atan(distancia_horizontal / h_rel)
+        # 4. Cálculo do Ângulo de Visão (Alpha)
+        # No Lofte 7, o ângulo é medido da vertical para a frente.
+        # tan(alpha) = Distância / Altura Relativa
+        angulo_rad = math.atan(distancia_horizontal / h_relativa)
         angulo_deg = math.degrees(angulo_rad)
         
-        # --- RESULTADO FINAL ---
+        # --- EXIBIÇÃO DE RESULTADOS ---
         st.divider()
-        c1, c2, c3 = st.columns(3)
+        res1, res2, res3 = st.columns(3)
         
-        with c1:
-            st.metric("ÂNGULO DA MIRA", f"{angulo_deg:.1f}°")
-        with c2:
+        with res1:
+            st.metric("ÂNGULO NA MIRA", f"{angulo_deg:.1f}°")
+        with res2:
             st.metric("TEMPO DE QUEDA", f"{tempo_queda:.1f} s")
-        with c3:
+        with res3:
             st.metric("DIST. AVANÇO", f"{distancia_horizontal:.0f} m")
-
-        # Alerta de segurança tática
-        if angulo_deg > 50:
-            st.warning("⚠️ Ângulo muito alto. Reduza a velocidade ou aumente a altitude.")
+            
+        # Alertas de envelope de bombardeio
+        if vs_ms != 0:
+            st.warning(f"Atenção: Compensando {vs_ms}m/s de deslocamento vertical.")
     else:
-        st.error("Altitude de voo deve ser maior que a elevação do alvo.")
+        st.error("Erro: A altitude de voo deve ser maior que a elevação do alvo.")
 
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
