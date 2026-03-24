@@ -375,50 +375,48 @@ with tab3:
 
 
 # ==========================================
-# ABA 4: FMC (DINÂMICO VIA SERVIDOR)
+# ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER)
 # ==========================================
 with tab4:
-    st.header("🚀 Flight Management Computer")
+    st.header("🚀 Monitor de Missão Dinâmico")
     
-    # Verificamos se temos dados do servidor
+    # 1. VALIDAÇÃO DE DADOS
     if not st.session_state.dados_campanha:
-        st.warning("📡 Sincronize com o servidor na barra lateral para carregar os aeródromos.")
+        st.warning("📡 Sem dados do servidor. Sincronize a telemetria na barra lateral.")
     elif not st.session_state.get('navlog_manual'):
-        st.info("⚠️ Configure ou importe uma rota para ativar o FMC.")
+        st.info("⚠️ Sem rota ativa. Importe um plano na Aba 1 ou crie um na Aba 3.")
     else:
-        # 1. EXTRAÇÃO DINÂMICA DAS BASES DO SERVIDOR
-        # Pegamos a lista exata que a API do Combat Box está enviando agora
-        bases_servidor = st.session_state.dados_campanha.get('Airfields', [])
-        lista_nomes_servidor = sorted([b.get('Name') for b in bases_servidor])
+        # 2. EXTRAÇÃO DINÂMICA DAS OPÇÕES DO SERVIDOR
+        # Pegamos exatamente o que a API está cuspindo agora
+        bases_vivas = [b.get('Name') for b in st.session_state.dados_campanha.get('Airfields', [])]
+        bases_vivas = sorted(list(set(bases_vivas))) # Remove duplicatas e ordena
 
-        # 2. INTERFACE DE SELEÇÃO
-        with st.expander("🌍 Aeródromos da Missão (Server Live)", expanded=True):
+        # 3. SELEÇÃO DE AERÓDROMOS
+        with st.expander("🌍 Aeródromos da Missão (Live Server)", expanded=True):
             col_dep, col_arr = st.columns(2)
             
             with col_dep:
-                # O menu só mostra o que veio do servidor
-                base_dep = st.selectbox("Decolagem de:", lista_nomes_servidor, key="dep_server")
-                # Busca a altitude no nosso dicionário. Se não achar, usa 30m como padrão.
+                # O dropdown só tem as bases que o server deu como opção
+                base_dep = st.selectbox("Decolagem de:", bases_vivas, key="fmc_dep_live")
+                # Busca a altura na nossa tabela global (que agora já está carregada)
                 alt_dep = db_altitudes_mapa.get(base_dep, 30)
                 st.caption(f"Elevação: {alt_dep}m")
                 
             with col_arr:
-                base_arr = st.selectbox("Destino final:", lista_nomes_servidor, key="arr_server")
+                base_arr = st.selectbox("Destino Final:", bases_vivas, key="fmc_arr_live")
                 alt_arr = db_altitudes_mapa.get(base_arr, 30)
                 st.caption(f"Elevação: {alt_arr}m")
 
-        # 3. PERFORMANCE VERTICAL (VNAV)
-        # Os campos já vêm preenchidos com as altitudes que "linkamos" acima
+        # 4. PERFORMANCE VERTICAL (VNAV)
         with st.expander("📈 Perfil de Voo", expanded=True):
             v1, v2, v3, v4 = st.columns(4)
-            # Pegamos o avião selecionado na Aba 1 para as razões de subida/descida
             av_nome = st.session_state.get('av_nome_selecionado', "He-111 H-16")
             av = db_avioes.get(av_nome, {})
 
-            with v1: alt_cruzeiro = st.number_input("Cruzeiro (m)", value=4000, step=500)
+            with v1: alt_cruzeiro = st.number_input("Altitude Cruzeiro (m)", value=4000, step=500)
             with v2: climb_rate = st.number_input("Razão Subida (m/s)", value=float(av.get('climb_rate_default', 2.5)))
             with v3: descent_rate = st.number_input("Razão Descida (m/s)", value=float(av.get('descent_rate_default', 4.0)))
-            with v4: alt_pista = st.number_input("Alt. Alvo (m)", value=alt_arr)
+            with v4: alt_pista = st.number_input("Alt. Alvo (m)", value=alt_arr) # Puxa automático da seleção acima
 
         # --- CÁLCULO DE ROTA ---
         nav_tas = float(st.session_state.get('vel_calc', 320))
