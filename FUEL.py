@@ -334,69 +334,98 @@ with tab1:
         st.caption(f"Capacidade Máxima: {av['tanque_max_l']} L")
         
 # ==========================================
-# ABA 2: MIRA DE BOMBARDEIO (LOFTE 7)
+# ABA 2: MIRA DE BOMBARDEIO (PADRÃO SPIFF)
 # ==========================================
 with tab2:
-    st.header("🎯 Calculadora de Mira (Lofte 7)")
-    st.markdown("Física de queda livre sincronizada com o padrão *Spiff's Calculator*.")
+    st.header("🎯 Bombsight Calculator (Lofte 7)")
+    
+    # --- INPUTS (Lado a Lado como na Original) ---
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        st.markdown("### ✈️ Flight Data")
+        # Puxa dados do st.session_state se existirem, senão usa padrão
+        alt_m = st.number_input("Altitude de Voo (m)", value=4000, step=100)
+        elev_m = st.number_input("Elevação do Alvo (m)", value=0, step=10)
+        ias_kmh = st.number_input("Velocidade Indicada - IAS (km/h)", value=300, step=5)
+        
+    with c2:
+        st.markdown("### 🌬️ Wind & Course")
+        tc_deg = st.number_input("Rumo da Aeronave - TC (°)", value=0, min_value=0, max_value=360)
+        w_dir_from = st.number_input("Vento vindo DE (°)", value=0, min_value=0, max_value=360)
+        w_spd_ms = st.number_input("Velocidade do Vento (m/s)", value=0.0, step=0.5)
 
-    # --- INPUTS TÉCNICOS ---
-    col_inp1, col_inp2 = st.columns(2)
+    # --- MOTOR DE CÁLCULO (LÓGICA SPIFF) ---
+    # 1. Constantes Físicas
+    g = 9.80665
+    h_rel = alt_m - elev_m
     
-    with col_inp1:
-        # Altitude de voo (ASL)
-        alt_voo = st.number_input("Altitude de Voo (m)", value=4000, step=100)
-        # Elevação do terreno no alvo
-        elev_alvo = st.number_input("Elevação do Alvo (m)", value=0, step=10)
-        # Velocidade em relação ao solo (GS)
-        gs_kmh = st.number_input("Velocidade de Solo (GS km/h)", value=300, step=5)
+    # 2. Cálculo da TAS (Correção Atmosférica IL-2)
+    # A regra padrão do IL-2 é aprox. 1.6% de ganho por 1000m
+    tas_kmh = ias_kmh * (1 + (0.016 * (alt_m / 1000)))
+    tas_ms = tas_kmh / 3.6
     
-    with col_inp2:
-        # Velocidade vertical (crucial para precisão em ataques não nivelados)
-        vs_ms = st.number_input("Velocidade Vertical (m/s)", value=0.0, step=0.1, 
-                                 help="0 para voo nivelado. Positivo (+) para subida, Negativo (-) para descida.")
-        st.info("💡 A GS e a Altitude podem ser puxadas automaticamente do FMC (Aba 4).")
+    # 3. Triângulo de Vento
+    # Ângulo entre o rumo e a origem do vento
+    angle_wind_rad = math.radians(w_dir_from - tc_deg)
+    
+    # Componentes do Vento
+    w_cross = w_spd_ms * math.sin(angle_wind_rad)
+    w_head = w_spd_ms * math.cos(angle_wind_rad)
+    
+    # Ground Speed (GS) e Wind Correction Angle (WCA)
+    # GS = sqrt(TAS² - V_cross²) - V_head
+    try:
+        wca_rad = math.asin(w_cross / tas_ms)
+        wca_deg = math.degrees(wca_rad)
+        gs_ms = (tas_ms * math.cos(wca_rad)) - w_head
+        gs_kmh = gs_ms * 3.6
+    except:
+        wca_deg = 0.0
+        gs_kmh = tas_kmh
 
-    # --- MOTOR DE CÁLCULO BALÍSTICO ---
-    # 1. Constantes e Conversões
-    g = 9.80665  # Gravidade padrão (m/s²)
-    h_relativa = alt_voo - elev_alvo  # Altura real acima do alvo
-    v_horizontal_ms = gs_kmh / 3.6    # GS convertida para m/s
-    
-    if h_relativa > 0:
-        # 2. Cálculo do Tempo de Queda (t) considerando V.S.
-        # Usamos a equação horária do espaço: h = (vs * t) + (0.5 * g * t²)
-        # Resolvendo a equação quadrática para t:
-        # 0.5gt² + vs*t - h = 0
-        termo_raiz = (vs_ms**2) + (2 * g * h_relativa)
-        tempo_queda = (-vs_ms + math.sqrt(termo_raiz)) / g
+    # 4. Balística de Queda (Lofte 7)
+    if h_rel > 0:
+        # Tempo de queda no vácuo
+        t_fall = math.sqrt((2 * h_rel) / g)
         
-        # 3. Distância de Avanço (D)
-        distancia_horizontal = v_horizontal_ms * tempo_queda
+        # Cálculo de Trail (Arrasto da Bomba)
+        # O Spiff usa uma simplificação onde o Trail cresce com a TAS e Altitude
+        # Fórmula aproximada: Trail_Dist = (TAS_ms * 0.05) * (h_rel / 1000)
+        trail_dist = (tas_ms * 0.05) * (h_rel / 1000)
         
-        # 4. Cálculo do Ângulo de Visão (Alpha)
-        # No Lofte 7, o ângulo é medido da vertical para a frente.
-        # tan(alpha) = Distância / Altura Relativa
-        angulo_rad = math.atan(distancia_horizontal / h_relativa)
-        angulo_deg = math.degrees(angulo_rad)
+        # Distância de Avanço Real (D)
+        dist_forward = (gs_ms * t_fall) - trail_dist
         
-        # --- EXIBIÇÃO DE RESULTADOS ---
+        # Ângulo Final da Mira (Alpha)
+        # tan(alpha) = dist_forward / h_rel
+        angle_rad = math.atan(dist_forward / h_rel)
+        angle_deg = math.degrees(angle_rad)
+        
+        # --- OUTPUTS (Display Final) ---
         st.divider()
         res1, res2, res3 = st.columns(3)
         
         with res1:
-            st.metric("ÂNGULO NA MIRA", f"{angulo_deg:.1f}°")
-        with res2:
-            st.metric("TEMPO DE QUEDA", f"{tempo_queda:.1f} s")
-        with res3:
-            st.metric("DIST. AVANÇO", f"{distancia_horizontal:.0f} m")
+            st.metric("TAS (Vel. Real)", f"{tas_kmh:.0f} km/h")
+            st.metric("GS (Vel. Solo)", f"{gs_kmh:.0f} km/h")
             
-        # Alertas de envelope de bombardeio
-        if vs_ms != 0:
-            st.warning(f"Atenção: Compensando {vs_ms}m/s de deslocamento vertical.")
-    else:
-        st.error("Erro: A altitude de voo deve ser maior que a elevação do alvo.")
+        with res2:
+            st.metric("TEMPO DE QUEDA", f"{t_fall:.1f} s")
+            st.metric("DERIVA (DRIFT)", f"{wca_deg:.1f}°")
+            
+        with res3:
+            st.subheader("⚙️ AJUSTE MIRA")
+            st.markdown(f"# {angle_deg:.1f}°")
+            st.caption("Insira este valor no Lofte 7")
 
+        # Representação Visual da Deriva
+        if abs(wca_deg) > 0.5:
+            direcao = "DIREITA" if wca_deg > 0 else "ESQUERDA"
+            st.warning(f"Ajuste o desvio lateral da mira: {abs(wca_deg):.1f}° para a {direcao}")
+            
+    else:
+        st.error("Altitude insuficiente para o cálculo.")
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
