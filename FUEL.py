@@ -287,20 +287,18 @@ with st.sidebar:
             f'<div style="color:#aaa;font-size:11px;margin-top:2px;">'
             f'🏆 {win_txt} &nbsp;|&nbsp; ⏳ {rem_txt} dias restantes</div></div>'
             f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;">'
-            f'<div style="color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:4px;">🌦️ METEOROLOGIA</div>'
-            f'<div style="display:flex;gap:8px;">'
-            f'<div style="flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;">'
-            f'<div style="color:#f5a623;font-size:10px;font-weight:bold;margin-bottom:2px;">☀️ HOJE</div>'
-            f'<div style="color:#eee;">💨 {v1} m/s</div>'
-            f'<div style="color:#eee;">🧭 {d1:.0f}°</div>'
-            f'<div style="color:#eee;">🌡️ {t1} °C</div>'
-            f'</div>'
-            f'<div style="flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;">'
-            f'<div style="color:#7ec8e3;font-size:10px;font-weight:bold;margin-bottom:2px;">🌙 AMANHÃ</div>'
-            f'<div style="color:#eee;">💨 {v2} m/s</div>'
-            f'<div style="color:#eee;">🧭 {d2:.0f}°</div>'
-            f'<div style="color:#eee;">🌡️ {t2} °C</div>'
-            f'</div></div></div></div>',
+            f'<div style="color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:6px;">🌦️ METEOROLOGIA</div>'
+            f'<div style="background:#0d1117;border-radius:5px;padding:5px 8px;margin-bottom:5px;">'
+            f'<div style="color:#f5a623;font-size:10px;font-weight:bold;margin-bottom:3px;">☀️ HOJE</div>'
+            f'<div style="display:flex;gap:12px;color:#eee;">'
+            f'<span>💨 {v1} m/s</span><span>🧭 {d1:.0f}°</span><span>🌡️ {t1} °C</span>'
+            f'</div></div>'
+            f'<div style="background:#0d1117;border-radius:5px;padding:5px 8px;">'
+            f'<div style="color:#7ec8e3;font-size:10px;font-weight:bold;margin-bottom:3px;">🌙 AMANHÃ</div>'
+            f'<div style="display:flex;gap:12px;color:#eee;">'
+            f'<span>💨 {v2} m/s</span><span>🧭 {d2:.0f}°</span><span>🌡️ {t2} °C</span>'
+            f'</div></div>'
+            f'</div></div>',
             unsafe_allow_html=True
         )
 
@@ -999,23 +997,39 @@ with tab6:
         unsafe_allow_html=True
     )
 
+    # Solução definitiva para o mapa:
+    # 1. Impede scroll da PÁGINA (evita que o título/tabs sumam)
+    # 2. O header/tabs do Streamlit ficam sempre visíveis (sticky)
+    # 3. O iframe ocupa exatamente o espaço restante abaixo do botão
+    # 4. O scroll/zoom do mapa acontece DENTRO do iframe (não na página)
     st.markdown("""
         <style>
-        [data-testid="stMainBlockContainer"] {
-            padding-left:  1rem !important;
-            padding-right: 0.5rem !important;
-            padding-bottom: 0 !important;
+        html, body, [data-testid="stApp"] {
+            overflow: hidden !important;
+            height: 100% !important;
         }
         [data-testid="stMain"] {
             overflow: hidden !important;
+            height: 100% !important;
+        }
+        [data-testid="stMainBlockContainer"] {
+            overflow: hidden !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0 !important;
+            padding-bottom: 0 !important;
+            height: 100% !important;
+        }
+        [data-testid="stVerticalBlockBorderWrapper"],
+        [data-testid="stVerticalBlock"] {
+            height: 100%;
         }
         </style>
     """, unsafe_allow_html=True)
 
+    # iframe com altura calculada: 100vh menos header (~3.5rem) menos tabs (~2.5rem) menos botão (~2.2rem)
     st.markdown(
-        f'<div style="margin-left:-1rem;margin-right:-0.5rem;margin-bottom:-3rem;">'
         f'<iframe src="{MAP_URL}" '
         f'style="display:block;border:none;width:100%;height:calc(100vh - 8.5rem);" '
-        f'allow="fullscreen"></iframe></div>',
+        f'allow="fullscreen"></iframe>',
         unsafe_allow_html=True
     )
