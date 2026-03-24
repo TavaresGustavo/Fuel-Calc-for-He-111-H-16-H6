@@ -310,7 +310,6 @@ with tab3:
             st.warning(f"**{val_conv} metros** = {val_conv * 3.28084:.0f} pés")
             st.warning(f"**{val_conv} pés** = {val_conv / 3.28084:.0f} metros")
             
-with col_b:
-            
+with col_b:     
     else:
         st.info("Aguardando sincronização automática com o servidor...")
