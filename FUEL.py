@@ -31,76 +31,81 @@ if 'usar_dados_importados' not in st.session_state: st.session_state.usar_dados_
 if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = None
 
 # ==========================================
-# 1. MOTOR DE DADOS E TRADUÇÃO
+# 1. FUNÇÕES DA API E TRADUÇÃO
 # ==========================================
 @st.cache_data(ttl=3600)
 def traduzir_texto(texto):
-    if not texto or texto.strip() == "": return ""
+    if not texto or texto.strip() == "":
+        return ""
     try:
-        return GoogleTranslator(source='en', target='pt').translate(texto)
-    except: return texto
+        tradutor = GoogleTranslator(source='en', target='pt')
+        return tradutor.translate(texto)
+    except Exception:
+        return texto 
 
 def fetch_combatbox_data():
     try:
         api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
-        r = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
-        if r.status_code == 200:
-            dados = r.json()
-            st.session_state.dados_campanha = dados
-            w = dados.get("Weather", {})
-            st.session_state.temp_cb = float(w.get("Temperature", 15.0))
-            st.session_state.vento_vel_cb = float(w.get("WindAtGroundLevel", {}).get("Speed", 5.0))
-            st.session_state.vento_dir_cb = float(w.get("WindAtGroundLevel", {}).get("Bearing", 45.0))
-            st.session_state.nuvens_hoje_cb = w.get("CloudDescription", "N/D")
-            st.session_state.status_cb = "✅ API Sincronizada!"
-    except: st.session_state.status_cb = "❌ Erro de Conexão"
+        response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
+        
+        if response.status_code != 200:
+            st.session_state.status_cb = f"❌ Erro HTTP {response.status_code}"
+            return
+            
+        dados_json = response.json()
+        st.session_state.dados_campanha = dados_json 
+        
+        weather_hoje = dados_json.get("Weather", {})
+        wind_hoje = weather_hoje.get("WindAtGroundLevel", {})
+        st.session_state.temp_cb = float(weather_hoje.get("Temperature", 15.0))
+        st.session_state.vento_vel_cb = float(wind_hoje.get("Speed", 5.0))
+        st.session_state.vento_dir_cb = float(wind_hoje.get("Bearing", 45.0))
+        st.session_state.nuvens_hoje_cb = weather_hoje.get("CloudDescription", "N/D")
+
+        weather_amanha = dados_json.get("WeatherTomorrow", {})
+        wind_amanha = weather_amanha.get("WindAtGroundLevel", {})
+        st.session_state.temp_amanha_cb = float(weather_amanha.get("Temperature", 15.0))
+        st.session_state.vento_vel_amanha_cb = float(wind_amanha.get("Speed", 5.0))
+        st.session_state.vento_dir_amanha_cb = float(wind_amanha.get("Bearing", 45.0))
+        st.session_state.nuvens_amanha_cb = weather_amanha.get("CloudDescription", "N/D")
+        
+        st.session_state.status_cb = "✅ API Sincronizada! Telemetria AO VIVO."
+            
+    except Exception as e:
+        st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
 
 
 # ==========================================
-# 2. BASE DE DADOS: AERONAVES (CHAVES FIXADAS)
+# 2. BASE DE DADOS: Pesos e Aeronaves
 # ==========================================
+peso_bombas = {"SC 50": 50, "SC 250": 250, "SC 500": 500, "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400}
+
 db_avioes = {
-    "He-111 H-16": {
-        "peso_base": 9300, 
-        "peso_max": 14000, 
-        "cons": 10.2, 
-        "vel": 330,
-        "mods": {"Padrão": 0},
-        "bombas": {
-            "Vazio": 0, 
-            "1x SC 2500": 2400, 
-            "2x SC 1800": 3560, 
-            "2x SC 1000": 2180, 
-            "8x SC 250": 2000, 
-            "32x SC 50": 1600
-        }
-    },
     "He-111 H-6": {
-        "peso_base": 9500, 
-        "peso_max": 14000, 
-        "cons": 10.5, 
-        "vel": 320,
-        "mods": {"Padrão": 0, "Torre 20mm": 147, "Torre Ventral": 193},
-        "bombas": {"Vazio": 0, "2x SC 1000": 2180, "16x SC 50": 800}
+        "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
+        "armamento_fixo": "6 x 7.92 mm MG-15",
+        "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147, "Ambas": 193},
+        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "4x SC 250": 1000, "2x SC 1000": 2180}
+    },
+    "He-111 H-16": {
+        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
+        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "4x SC 250": 1000, "8x SC 250": 2000, "2x SC 500": 1000, "2x SC 1800": 3560, "1x SC 2500": 2400}
     },
     "Ju-52/3M": {
-        "peso_base": 7500, 
-        "peso_max": 11000, 
-        "cons": 12.0, 
-        "vel": 240,
-        "mods": {"Padrão": 0, "Paraquedistas": 1200, "Carga Interna": 2300},
-        "bombas": {"Vazio": 0, "10x MAB 250": 2550}
+        "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
+        "armamento_fixo": "Transporte",
+        "modificacoes": {"Padrão": 0, "Torre Traseira": 130, "Carga Interna (2300kg)": 2300, "12 Paraquedistas (1200kg)": 1200},
+        "presets_bombas": {"Vazio": 0, "10x MAB 250": 2550}
     },
     "Ju-88 A-4": {
-        "peso_base": 8600, 
-        "peso_max": 14000, 
-        "cons": 10.0, 
-        "vel": 370,
-        "mods": {"Padrão": 0, "Sem Gôndola": -123},
-        "bombas": {"Vazio": 0, "4x SC 500": 2000, "10x SC 50": 500, "28x SC 50": 1400}
+        "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
+        "armamento_fixo": "1x 13mm | 4x 7.92mm",
+        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Inferior": -123},
+        "presets_bombas": {"Vazio": 0, "10x SC 50": 500, "4x SC 250": 1000, "4x SC 500": 2000}
     }
 }
-
 # ==========================================
 # 3. INTERFACE E BARRA LATERAL
 # ==========================================
