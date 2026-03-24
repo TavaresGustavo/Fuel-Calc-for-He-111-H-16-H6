@@ -3,6 +3,7 @@ import json
 import math
 import requests
 import time
+import pandas as pd
 from deep_translator import GoogleTranslator
 
 # ==========================================
@@ -130,65 +131,51 @@ with st.sidebar:
     painel_telemetria_ativo()
 
 st.title("🛩️ Painel Tático C4ISR")
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 E6B & NavLog", "🌐 Inteligência Global"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog & E6B", "🚀 FMC (Ativo)", "🌐 Inteligência"])
+
 # ==========================================
-# ABA 1: HANGAR
+# ABA 1: HANGAR & IMPORTAÇÃO
 # ==========================================
 with tab1:
-    arquivo_plano = st.file_uploader("📥 Importar .json do Mission Planner (Opcional)", type=["json"])
+    col_file, col_clear = st.columns([3, 1])
+    with col_file:
+        arquivo_plano = st.file_uploader("📥 Importar Plano (.json)", type=["json"])
+    with col_clear:
+        if st.button("🗑️ Limpar Rota", use_container_width=True):
+            st.session_state.navlog_manual = []
+            st.session_state.usar_dados_importados = False
+            st.rerun()
     
-    # Motor de Leitura de JSON com proteção contra sobrescrita contínua
     if arquivo_plano is not None:
         file_content = arquivo_plano.getvalue()
         current_hash = hash(file_content)
         
-        # Só atualiza a tabela do NavLog no exato momento em que o ficheiro é enviado
         if st.session_state.last_file_hash != current_hash:
             st.session_state.last_file_hash = current_hash
             try:
                 dados_plano = json.loads(file_content)
-                if "routes" in dados_plano and len(dados_plano["routes"]) > 0 and "latLngs" in dados_plano["routes"][0]:
+                
+                # Suporta formato Mission Planner ou o nosso formato nativo
+                if "routes" in dados_plano: # Formato Mission Planner
                     rota = dados_plano["routes"][0]
                     coords = rota["latLngs"]
-                    
-                    dist_total = 0.0
                     navlog_temp = []
+                    dist_total = 0
                     for i in range(len(coords)-1):
-                        dx = coords[i+1]['lng'] - coords[i]['lng']
-                        dy = coords[i+1]['lat'] - coords[i]['lat']
+                        dx, dy = coords[i+1]['lng'] - coords[i]['lng'], coords[i+1]['lat'] - coords[i]['lat']
                         dist = math.hypot(dx, dy) * 3.0
                         dist_total += dist
                         tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
-                        navlog_temp.append({"Perna": f"WP{i} ➔ WP{i+1}", "Distância (km)": round(dist, 1), "Rumo (TC)": round(tc_deg, 0)})
-                    
+                        navlog_temp.append({"Perna": f"WP{i}➔WP{i+1}", "Distância (km)": round(dist, 1), "Rumo (TC)": round(tc_deg, 0)})
                     st.session_state.navlog_manual = navlog_temp
                     st.session_state.dist_calc = dist_total
-                    st.session_state.vel_calc = float(rota.get("speed", 320.0))
-                    st.session_state.usar_dados_importados = True
-                    
-                    st.success("✅ Rota tática importada! O NavLog (Aba 3) foi preenchido automaticamente.")
-            except:
-                st.error("Erro ao ler JSON.")
-
-    col_esq, col_dir = st.columns(2)
-    with col_esq:
-        aviao = db_avioes[st.selectbox("Aeronave", list(db_avioes.keys()))]
-        distancia_km = st.number_input("Distância (km)", value=float(st.session_state.dist_calc), disabled=st.session_state.usar_dados_importados)
-        velocidade_estimada = st.number_input("Velocidade (km/h)", value=float(st.session_state.vel_calc), disabled=st.session_state.usar_dados_importados)
-        margem_reserva = st.slider("Reserva (%)", 0, 150, 90)
-
-    with col_dir:
-        peso_mods = aviao["modificacoes"][st.selectbox("Modificações", list(aviao["modificacoes"].keys()))]
-        peso_bombas_total = aviao["presets_bombas"][st.selectbox("Bombas", list(aviao["presets_bombas"].keys()))]
-
-    combustivel_com_reserva = ((distancia_km / velocidade_estimada) * 60) * aviao["consumo_l_min"] * (1 + (margem_reserva / 100))
-    peso_total = aviao["peso_base_sem_combustivel"] + peso_mods + peso_bombas_total + (combustivel_com_reserva * 0.72)
-
-    st.divider()
-    if peso_total <= aviao["peso_max"]:
-        st.success(f"✅ DECOLAGEM AUTORIZADA: {peso_total:.0f} kg / {aviao['peso_max']} kg")
-    else:
-        st.error(f"❌ SOBRECARGA: {peso_total:.0f} kg excede limite de {aviao['peso_max']} kg.")
+                else: # Nosso formato nativo
+                    st.session_state.navlog_manual = dados_plano
+                    st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
+                
+                st.session_state.usar_dados_importados = True
+                st.success("✅ Plano carregado com sucesso!")
+            except: st.error("Erro ao processar o ficheiro JSON.")
 
 # ==========================================
 # ABA 2: LOTFE 7
@@ -311,9 +298,121 @@ with tab3:
             st.warning(f"**{val_conv} pés** = {val_conv / 3.28084:.0f} metros")
 
 # ==========================================
-# ABA 4: INTELIGÊNCIA GLOBAL E BRIEFINGS
+# ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER)
 # ==========================================
 with tab4:
+    st.header("🚀 Execução de Missão (FMC)")
+    
+    # --- Parâmetros de Performance Vertical ---
+    with st.expander("⚙️ Perfil de Subida e Descida (VNAV)", expanded=False):
+        c1, c2, c3, c4 = st.columns(4)
+        with c1: alt_cruzeiro = st.number_input("Altitude Cruzeiro (m)", value=4000, step=500)
+        with c2: climb_rate = st.number_input("Razão Subida (m/s)", value=2.5, step=0.5)
+        with c3: descent_rate = st.number_input("Razão Descida (m/s)", value=4.0, step=0.5)
+        with c4: alt_pista = st.number_input("Alt. Destino (m)", value=100, step=50)
+
+    # --- Motor de Cálculo de Rota ---
+    pernas_fmc = []
+    dist_total_acumulada = 0
+    
+    # Puxamos o vento atual do servidor para os cálculos
+    nav_tas_fmc = float(st.session_state.get('vel_calc', 320))
+    w_dir_fmc = float(st.session_state.vento_dir_cb)
+    w_spd_fmc = float(st.session_state.vento_vel_cb * 3.6) # Convertido para km/h
+
+    if st.session_state.navlog_manual:
+        for idx, linha in enumerate(st.session_state.navlog_manual):
+            try:
+                dist = float(linha.get("Distância (km)", 0.0))
+                tc = float(linha.get("Rumo (TC)", 0.0))
+                
+                # Trigonometria de Vento (E6B Interno)
+                wa = math.radians(w_dir_fmc - tc)
+                sin_wca = max(-1.0, min(1.0, (w_spd_fmc * math.sin(wa)) / nav_tas_fmc))
+                wca = math.degrees(math.asin(sin_wca))
+                th = (tc + wca + 360) % 360
+                gs = max(1.0, (nav_tas_fmc * math.cos(math.radians(wca))) - (w_spd_fmc * math.cos(wa)))
+                tempo_seg = (dist / gs) * 3600
+                
+                dist_total_acumulada += dist
+                pernas_fmc.append({
+                    "id": idx, "nome": linha.get("Perna", f"WP{idx}"),
+                    "proa": th, "tempo": tempo_seg, "dist_acum": dist_total_acumulada
+                })
+            except: continue
+
+    if pernas_fmc:
+        # --- Gráfico de Perfil de Voo ---
+        dist_climb = ((alt_cruzeiro - alt_pista) / climb_rate) * (nav_tas_fmc / 3600)
+        dist_descent = ((alt_cruzeiro - alt_pista) / descent_rate) * (nav_tas_fmc / 3600)
+        total_km = pernas_fmc[-1]['dist_acum']
+
+        df_vnav = pd.DataFrame({
+            "Distância (km)": [0, dist_climb, max(dist_climb, total_km - dist_descent), total_km],
+            "Altitude (m)": [alt_pista, alt_cruzeiro, alt_cruzeiro, alt_pista]
+        })
+        st.area_chart(df_vnav.set_index("Distância (km)"))
+        
+        c_t1, c_t2 = st.columns(2)
+        with c_t1: st.caption(f"🏔️ Nivelar aos: {dist_climb:.1f} km")
+        with c_t2: st.caption(f"📉 Iniciar Descida aos: {total_km - dist_descent:.1f} km")
+
+        st.divider()
+
+        # --- HUD DE EXECUÇÃO (Cronómetro Ativo) ---
+        @st.fragment(run_every="1s")
+        def hud_ativo():
+            idx_ativo = st.session_state.index_perna_ativa
+            
+            if idx_ativo >= len(pernas_fmc):
+                st.success("🏁 MISSÃO CONCLUÍDA!")
+                if st.button("🔄 Reiniciar Missão"):
+                    st.session_state.index_perna_ativa = 0
+                    st.session_state.cronometro_rodando = False
+                    st.rerun()
+                return
+
+            p = pernas_fmc[idx_ativo]
+            h1, h2, h3 = st.columns([2, 1, 1])
+            
+            with h1:
+                st.subheader(f"📍 Atual: {p['nome']}")
+                st.markdown(f"## 🧭 PROA: {p['proa']:.0f}°")
+            
+            with h2:
+                if st.session_state.cronometro_rodando:
+                    passado = time.time() - st.session_state.tempo_inicio_perna
+                    restante = max(0, p['tempo'] - passado)
+                    m, s = divmod(int(restante), 60)
+                    st.metric("Tempo para WP", f"{m:02d}:{s:02d}")
+                    if restante <= 0: st.toast("⚠️ WP ATINGIDO! CURVAR AGORA!", icon="🔔")
+                else:
+                    m, s = divmod(int(p['tempo']), 60)
+                    st.metric("ETE Estimado", f"{m:02d}:{s:02d}")
+
+            with h3:
+                if not st.session_state.cronometro_rodando:
+                    if st.button("▶️ START", use_container_width=True):
+                        st.session_state.cronometro_rodando = True
+                        st.session_state.tempo_inicio_perna = time.time()
+                        st.rerun()
+                else:
+                    if st.button("⏭️ NEXT", use_container_width=True):
+                        st.session_state.index_perna_ativa += 1
+                        st.session_state.tempo_inicio_perna = time.time()
+                        st.rerun()
+                    if st.button("⏹️ ABORT", use_container_width=True):
+                        st.session_state.cronometro_rodando = False
+                        st.rerun()
+
+        hud_ativo()
+    else:
+        st.info("Crie uma rota na Aba 3 ou importe um plano na Aba 1 para ativar o FMC.")
+
+# ==========================================
+# ABA 5: INTELIGÊNCIA GLOBAL E BRIEFINGS
+# ==========================================
+with tab5:
     st.header("🌐 Inteligência Tática e Logística")
     if st.session_state.dados_campanha:
         dados = st.session_state.dados_campanha
