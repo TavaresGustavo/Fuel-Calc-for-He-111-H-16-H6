@@ -278,44 +278,31 @@ with st.sidebar:
         t2 = st.session_state.temp_amanha_cb
         ts = time.strftime('%H:%M:%S')
 
-        st.markdown(f"""
-            <div style='font-family:sans-serif;font-size:12px;line-height:1.6;'>
-
-              <!-- STATUS -->
-              <div style='color:#666;margin-bottom:6px;'>
-                {ok} API &nbsp;|&nbsp; ⏱ {ts}
-              </div>
-
-              <!-- CAMPANHA -->
-              <div style='background:#161b22;border-radius:6px;padding:7px 10px;margin-bottom:8px;'>
-                <div style='color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:3px;'>📅 CAMPANHA</div>
-                <div style='color:#eee;font-weight:bold;'>{dia_txt}</div>
-                <div style='color:#aaa;font-size:11px;margin-top:2px;'>
-                  🏆 {win_txt} &nbsp;|&nbsp; ⏳ {rem_txt} dias restantes
-                </div>
-              </div>
-
-              <!-- METEOROLOGIA -->
-              <div style='background:#161b22;border-radius:6px;padding:7px 10px;'>
-                <div style='color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:4px;'>🌦️ METEOROLOGIA</div>
-                <div style='display:flex;gap:8px;'>
-                  <div style='flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;'>
-                    <div style='color:#f5a623;font-size:10px;font-weight:bold;margin-bottom:2px;'>☀️ HOJE</div>
-                    <div style='color:#eee;'>💨 {v1} m/s</div>
-                    <div style='color:#eee;'>🧭 {d1:.0f}°</div>
-                    <div style='color:#eee;'>🌡️ {t1} °C</div>
-                  </div>
-                  <div style='flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;'>
-                    <div style='color:#7ec8e3;font-size:10px;font-weight:bold;margin-bottom:2px;'>🌙 AMANHÃ</div>
-                    <div style='color:#eee;'>💨 {v2} m/s</div>
-                    <div style='color:#eee;'>🧭 {d2:.0f}°</div>
-                    <div style='color:#eee;'>🌡️ {t2} °C</div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="font-family:sans-serif;font-size:12px;line-height:1.6;">'
+            f'<div style="color:#666;margin-bottom:6px;">{ok} API &nbsp;|&nbsp; ⏱ {ts}</div>'
+            f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;margin-bottom:8px;">'
+            f'<div style="color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:3px;">📅 CAMPANHA</div>'
+            f'<div style="color:#eee;font-weight:bold;">{dia_txt}</div>'
+            f'<div style="color:#aaa;font-size:11px;margin-top:2px;">'
+            f'🏆 {win_txt} &nbsp;|&nbsp; ⏳ {rem_txt} dias restantes</div></div>'
+            f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;">'
+            f'<div style="color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:4px;">🌦️ METEOROLOGIA</div>'
+            f'<div style="display:flex;gap:8px;">'
+            f'<div style="flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;">'
+            f'<div style="color:#f5a623;font-size:10px;font-weight:bold;margin-bottom:2px;">☀️ HOJE</div>'
+            f'<div style="color:#eee;">💨 {v1} m/s</div>'
+            f'<div style="color:#eee;">🧭 {d1:.0f}°</div>'
+            f'<div style="color:#eee;">🌡️ {t1} °C</div>'
+            f'</div>'
+            f'<div style="flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;">'
+            f'<div style="color:#7ec8e3;font-size:10px;font-weight:bold;margin-bottom:2px;">🌙 AMANHÃ</div>'
+            f'<div style="color:#eee;">💨 {v2} m/s</div>'
+            f'<div style="color:#eee;">🧭 {d2:.0f}°</div>'
+            f'<div style="color:#eee;">🌡️ {t2} °C</div>'
+            f'</div></div></div></div>',
+            unsafe_allow_html=True
+        )
 
     painel_telemetria_ativo()
 
@@ -330,29 +317,25 @@ with st.sidebar:
             total = max(pa + px, 1)
             pct_a = int(pa / total * 100)
             pct_x = 100 - pct_a
-            pilots_html = f"""
-              <!-- PILOTOS -->
-              <div style='background:#161b22;border-radius:6px;padding:7px 10px;margin-top:8px;margin-bottom:8px;'>
-                <div style='color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:5px;'>✈️ PILOTS ON STATION</div>
-                <div style='display:flex;justify-content:space-around;margin-bottom:5px;'>
-                  <div style='text-align:center;'>
-                    <div style='color:#dd4444;font-size:28px;font-weight:900;line-height:1;'>{pa}</div>
-                    <div style='color:#888;font-size:10px;letter-spacing:.5px;'>ALLIES</div>
-                  </div>
-                  <div style='text-align:center;'>
-                    <div style='color:#4488cc;font-size:28px;font-weight:900;line-height:1;'>{px}</div>
-                    <div style='color:#888;font-size:10px;letter-spacing:.5px;'>AXIS</div>
-                  </div>
-                </div>
-                <div style='display:flex;height:12px;border-radius:3px;overflow:hidden;'>
-                  <div style='width:{pct_a}%;background:#aa2222;display:flex;align-items:center;
-                              justify-content:center;font-size:9px;font-weight:bold;color:#fff;'>{pct_a}%</div>
-                  <div style='width:{pct_x}%;background:#2255aa;display:flex;align-items:center;
-                              justify-content:center;font-size:9px;font-weight:bold;color:#fff;'>{pct_x}%</div>
-                </div>
-                <div style='text-align:center;font-size:9px;color:#555;margin-top:2px;'>COALITION BALANCE</div>
-              </div>
-            """
+            pilots_html = (
+                f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;margin-bottom:8px;">'
+                f'<div style="color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:5px;">✈️ PILOTS ON STATION</div>'
+                f'<div style="display:flex;justify-content:space-around;margin-bottom:5px;">'
+                f'<div style="text-align:center;">'
+                f'<div style="color:#dd4444;font-size:28px;font-weight:900;line-height:1;">{pa}</div>'
+                f'<div style="color:#888;font-size:10px;">ALLIES</div>'
+                f'</div>'
+                f'<div style="text-align:center;">'
+                f'<div style="color:#4488cc;font-size:28px;font-weight:900;line-height:1;">{px}</div>'
+                f'<div style="color:#888;font-size:10px;">AXIS</div>'
+                f'</div></div>'
+                f'<div style="display:flex;height:12px;border-radius:3px;overflow:hidden;">'
+                f'<div style="width:{pct_a}%;background:#aa2222;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff;">{pct_a}%</div>'
+                f'<div style="width:{pct_x}%;background:#2255aa;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff;">{pct_x}%</div>'
+                f'</div>'
+                f'<div style="text-align:center;font-size:9px;color:#555;margin-top:2px;">COALITION BALANCE</div>'
+                f'</div>'
+            )
 
         countdown_html = ""
         end_str = st.session_state.mission_end_time
@@ -368,26 +351,22 @@ with st.sidebar:
                     mm  = int((restante % 3600) // 60)
                     ss  = int(restante % 60)
                     cor = "#ffcc00" if restante > 1800 else ("#ff8800" if restante > 600 else "#ff3333")
-                    countdown_html = f"""
-                      <!-- COUNTDOWN -->
-                      <div style='background:#0d1117;border:1px solid #333;border-radius:6px;padding:8px 6px;text-align:center;'>
-                        <div style='color:#aaa;font-size:10px;letter-spacing:1.5px;font-weight:bold;margin-bottom:4px;'>
-                          ⏰ MISSION COUNTDOWN
-                        </div>
-                        <div style='font-size:34px;font-weight:900;font-family:monospace;
-                                    color:{cor};letter-spacing:2px;line-height:1.1;'>
-                          {hh:02d}:{mm:02d}:{ss:02d}
-                        </div>
-                      </div>
-                    """
+                    countdown_html = (
+                        f'<div style="background:#0d1117;border:1px solid #333;border-radius:6px;padding:8px 6px;text-align:center;">'
+                        f'<div style="color:#aaa;font-size:10px;letter-spacing:1.5px;font-weight:bold;margin-bottom:4px;">⏰ MISSION COUNTDOWN</div>'
+                        f'<div style="font-size:34px;font-weight:900;font-family:monospace;color:{cor};letter-spacing:2px;line-height:1.1;">'
+                        f'{hh:02d}:{mm:02d}:{ss:02d}</div></div>'
+                    )
                 else:
-                    countdown_html = "<div style='color:#ff4444;text-align:center;padding:8px;'>🔄 Servidor a reiniciar...</div>"
+                    countdown_html = '<div style="color:#ff4444;text-align:center;padding:8px;">🔄 Servidor a reiniciar...</div>'
             except Exception:
                 pass
 
         if pilots_html or countdown_html:
-            st.markdown(f"<div style='font-family:sans-serif;'>{pilots_html}{countdown_html}</div>",
-                        unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="font-family:sans-serif;">{pilots_html}{countdown_html}</div>',
+                unsafe_allow_html=True
+            )
 
     sidebar_countdown()
 
@@ -1009,47 +988,34 @@ with tab6:
     )
 
     # Botão discreto para abrir em nova aba
-    st.markdown(f"""
-        <div style="margin-bottom:6px;">
-            <a href="{MAP_URL}" target="_blank"
-               style="display:inline-block;padding:4px 12px;background:#1a3a1a;
-                      border:1px solid #2a6a2a;border-radius:5px;color:#88ff88;
-                      text-decoration:none;font-size:12px;">
-                🔗 Abrir em nova aba
-            </a>
-            <span style="margin-left:10px;font-size:11px;color:#555;">
-                Linha de frente ao vivo · Bases · Objetivos
-            </span>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f'<div style="margin-bottom:5px;">'
+        f'<a href="{MAP_URL}" target="_blank" '
+        f'style="display:inline-block;padding:4px 12px;background:#1a3a1a;'
+        f'border:1px solid #2a6a2a;border-radius:5px;color:#88ff88;'
+        f'text-decoration:none;font-size:12px;">🔗 Abrir em nova aba</a>'
+        f'<span style="margin-left:10px;font-size:11px;color:#555;">'
+        f'Linha de frente ao vivo · Bases · Objetivos</span></div>',
+        unsafe_allow_html=True
+    )
 
-    # O iframe usa position:fixed para ocupar toda a área disponível
-    # sem sofrer clip do container do Streamlit (que causa o bug de zoom).
-    # left = largura da sidebar (~16rem) + margem (~1rem)
-    # O height subtrai a altura do header do Streamlit (~3rem) + tabs + botão
-    st.markdown(f"""
+    st.markdown("""
         <style>
-        /* Esconde a scrollbar da página principal quando estamos no mapa */
-        body {{ overflow: hidden !important; }}
+        [data-testid="stMainBlockContainer"] {
+            padding-left:  1rem !important;
+            padding-right: 0.5rem !important;
+            padding-bottom: 0 !important;
+        }
+        [data-testid="stMain"] {
+            overflow: hidden !important;
+        }
         </style>
-
-        <!-- Placeholder que ocupa a altura do iframe para o Streamlit não colapsar -->
-        <div style="height: calc(100vh - 9rem); width: 100%;"></div>
-
-        <!-- iframe fixado: começa após a sidebar, vai até a borda direita e inferior -->
-        <iframe
-            src="{MAP_URL}"
-            style="
-                position: fixed;
-                top:    9.5rem;
-                left:   17rem;
-                right:  0;
-                bottom: 0;
-                width:  calc(100vw - 17rem);
-                height: calc(100vh - 9.5rem);
-                border: none;
-                z-index: 100;
-            "
-            allow="fullscreen"
-        ></iframe>
     """, unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div style="margin-left:-1rem;margin-right:-0.5rem;margin-bottom:-3rem;">'
+        f'<iframe src="{MAP_URL}" '
+        f'style="display:block;border:none;width:100%;height:calc(100vh - 8.5rem);" '
+        f'allow="fullscreen"></iframe></div>',
+        unsafe_allow_html=True
+    )
