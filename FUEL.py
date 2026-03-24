@@ -997,39 +997,75 @@ with tab6:
         unsafe_allow_html=True
     )
 
-    # Solução definitiva para o mapa:
-    # 1. Impede scroll da PÁGINA (evita que o título/tabs sumam)
-    # 2. O header/tabs do Streamlit ficam sempre visíveis (sticky)
-    # 3. O iframe ocupa exatamente o espaço restante abaixo do botão
-    # 4. O scroll/zoom do mapa acontece DENTRO do iframe (não na página)
-    st.markdown("""
+    st.markdown(f"""
         <style>
-        html, body, [data-testid="stApp"] {
+        /* Impede qualquer scroll na página — o mapa scrolls internamente no iframe */
+        html, body, [data-testid="stApp"],
+        [data-testid="stMain"],
+        [data-testid="stMainBlockContainer"] {{
             overflow: hidden !important;
-            height: 100% !important;
-        }
-        [data-testid="stMain"] {
-            overflow: hidden !important;
-            height: 100% !important;
-        }
-        [data-testid="stMainBlockContainer"] {
-            overflow: hidden !important;
-            padding-left: 0.5rem !important;
-            padding-right: 0 !important;
-            padding-bottom: 0 !important;
-            height: 100% !important;
-        }
-        [data-testid="stVerticalBlockBorderWrapper"],
-        [data-testid="stVerticalBlock"] {
+        }}
+        #map-drag-container {{
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 8.5rem);
+            user-select: none;
+        }}
+        #map-iframe {{
+            display: block;
+            border: none;
+            width: 100%;
             height: 100%;
-        }
+        }}
+        /* Overlay invisível que cobre o iframe durante o drag,
+           mantendo os eventos de mouse na página pai */
+        #map-drag-overlay {{
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10;
+            cursor: grabbing;
+            background: transparent;
+        }}
         </style>
-    """, unsafe_allow_html=True)
 
-    # iframe com altura calculada: 100vh menos header (~3.5rem) menos tabs (~2.5rem) menos botão (~2.2rem)
-    st.markdown(
-        f'<iframe src="{MAP_URL}" '
-        f'style="display:block;border:none;width:100%;height:calc(100vh - 8.5rem);" '
-        f'allow="fullscreen"></iframe>',
-        unsafe_allow_html=True
-    )
+        <div id="map-drag-container">
+            <iframe id="map-iframe" src="{MAP_URL}" allow="fullscreen"></iframe>
+            <div id="map-drag-overlay"></div>
+        </div>
+
+        <script>
+        (function() {{
+            var container = document.getElementById('map-drag-container');
+            var overlay   = document.getElementById('map-drag-overlay');
+            var dragging  = false;
+
+            // Quando o mouse entra no container do iframe e pressiona botão
+            container.addEventListener('mousedown', function(e) {{
+                dragging = true;
+                overlay.style.display = 'block';
+                // Bloqueia scroll da página durante o drag
+                document.body.style.overflow = 'hidden';
+            }});
+
+            // Quando o mouse solta em qualquer lugar da página
+            window.addEventListener('mouseup', function(e) {{
+                if (dragging) {{
+                    dragging = false;
+                    overlay.style.display = 'none';
+                    document.body.style.overflow = 'hidden';
+                }}
+            }});
+
+            // Garante que wheel/scroll nunca chega à página
+            container.addEventListener('wheel', function(e) {{
+                e.stopPropagation();
+            }}, {{ passive: true }});
+
+            // Previne qualquer scroll acidental da página
+            document.addEventListener('scroll', function(e) {{
+                window.scrollTo(0, 0);
+            }});
+        }})();
+        </script>
+    """, unsafe_allow_html=True)
