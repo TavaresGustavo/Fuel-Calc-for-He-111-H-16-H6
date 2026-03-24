@@ -997,13 +997,24 @@ with tab6:
         unsafe_allow_html=True
     )
 
-    # CSS na página pai: bloqueia scroll da página (o scroll do mapa é interno ao iframe)
+    # CSS na página pai: bloqueia scroll + remove padding lateral do container
     st.markdown("""
         <style>
         html, body, [data-testid="stApp"],
         [data-testid="stMain"],
         [data-testid="stMainBlockContainer"] {
             overflow: hidden !important;
+        }
+        /* Remove padding lateral apenas na aba do mapa */
+        [data-testid="stMainBlockContainer"] {
+            padding-left:  0 !important;
+            padding-right: 0 !important;
+            padding-bottom: 0 !important;
+        }
+        /* Remove margem do bloco do components.html */
+        iframe[title="components.v1.html"] {
+            display: block !important;
+            margin: 0 !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -1015,11 +1026,11 @@ with tab6:
         f"""
         <style>
         * {{ margin:0; padding:0; box-sizing:border-box; }}
-        body {{ background:#0e1117; overflow:hidden; }}
+        html, body {{ width:100%; height:100%; background:#0e1117; overflow:hidden; }}
         #wrap {{
             position: relative;
             width: 100%;
-            height: 100vh;
+            height: 100%;
             user-select: none;
         }}
         #mapframe {{
@@ -1084,6 +1095,6 @@ with tab6:
         }})();
         </script>
         """,
-        height=820,
+        height=860,
         scrolling=False
     )
