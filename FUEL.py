@@ -95,57 +95,107 @@ db_altitudes_tecnico = {
     "Deelen": 48, "Handorf": 48, "Achmer": 54, "Eversheide": 40, "Metz": 165
 }
 
+Ótimo que o NameError foi resolvido, Gustavo! Como você é da área de TI, sabe que em uma refatoração de código, às vezes "limpamos" demais o schema e acabamos perdendo metadados importantes.
+
+Para garantir que o seu sistema tenha a fidelidade total de performance, pesos e armamentos, aqui está o Database (DB) Completo e Unificado. Ele já inclui os novos campos de subida/descida (VNAV) e as chaves longas que evitam os erros de KeyError que tivemos.
+
+Copie este bloco e substitua a sua db_avioes atual:
+
+Python
+# ==========================================
+# 2. BASE DE DADOS COMPLETA: AERONAVES (C4ISR)
+# ==========================================
 db_avioes = {
     "He-111 H-16": {
-        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, 
-        "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
-        "climb_rate_default": 2.5, "descent_rate_default": 4.0,
-        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
-        "modificacoes": {"Padrão": 0},
-        "presets_bombas": {"Vazio": 0, "1x SC 2500": 2400, "2x SC 1800": 3560, "32x SC 50": 1600}
+        "peso_base_sem_combustivel": 9300, 
+        "peso_max": 14000, 
+        "consumo_l_min": 10.2, 
+        "vel_cruzeiro_padrao": 330, 
+        "tanque_max_l": 3450,
+        "climb_rate_default": 2.5, 
+        "descent_rate_default": 4.0,
+        "armamento_fixo": "4x 7.92mm MG-81J | 1x 20mm MG-FF | 1x 13mm MG-131",
+        "modificacoes": {
+            "Padrão": 0,
+            "Remover Blindagem": -115,
+            "Tanque Adicional": 150
+        },
+        "presets_bombas": {
+            "Vazio": 0, 
+            "1x SC 2500 (Max)": 2400, 
+            "2x SC 1800 (Satan)": 3560, 
+            "2x SC 1000 (Hermann)": 2180, 
+            "8x SC 250": 2000, 
+            "32x SC 50": 1600
+        }
     },
     "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, 
-        "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
-        "climb_rate_default": 2.5, "descent_rate_default": 4.0,
-        "armamento_fixo": "6x 7.92 mm MG-15",
-        "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147},
-        "presets_bombas": {"Vazio": 0, "2x SC 1000": 2180, "16x SC 50": 800}
+        "peso_base_sem_combustivel": 9500, 
+        "peso_max": 14000, 
+        "consumo_l_min": 10.5, 
+        "vel_cruzeiro_padrao": 320, 
+        "tanque_max_l": 3450,
+        "climb_rate_default": 2.5, 
+        "descent_rate_default": 4.0,
+        "armamento_fixo": "6x 7.92mm MG-15",
+        "modificacoes": {
+            "Padrão": 0, 
+            "Torre Frontal (20mm)": 46, 
+            "Torre Ventral": 147, 
+            "Kit Anti-Navio": 193
+        },
+        "presets_bombas": {
+            "Vazio": 0, 
+            "2x SC 1000": 2180, 
+            "1x SC 1800": 1780, 
+            "4x SC 250": 1000, 
+            "16x SC 50": 800
+        }
     },
     "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, 
-        "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
-        "climb_rate_default": 2.0, "descent_rate_default": 3.0,
-        "armamento_fixo": "Transporte",
-        "modificacoes": {"Padrão": 0, "Paraquedistas": 1200, "Carga Interna": 2300},
-        "presets_bombas": {"Vazio": 0, "10x MAB 250": 2550}
+        "peso_base_sem_combustivel": 7500, 
+        "peso_max": 11000, 
+        "consumo_l_min": 12.0, 
+        "vel_cruzeiro_padrao": 240, 
+        "tanque_max_l": 2450,   
+        "climb_rate_default": 2.0, 
+        "descent_rate_default": 3.0,
+        "armamento_fixo": "1x 13mm MG-131 (Dorsal)",
+        "modificacoes": {
+            "Padrão": 0, 
+            "Paraquedistas (12 homens)": 1200, 
+            "Carga Interna Tática": 2300, 
+            "Rodas de Inverno": 45
+        },
+        "presets_bombas": {
+            "Vazio": 0, 
+            "10x MAB 250 (Containers)": 2550,
+            "12x SC 50": 600
+        }
     },
     "Ju-88 A-4": {
-        "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, 
-        "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
-        "climb_rate_default": 3.5, "descent_rate_default": 5.0,
-        "armamento_fixo": "1x 13mm | 4x 7.92mm",
-        "modificacoes": {"Padrão": 0, "Sem Gôndola": -123},
-        "presets_bombas": {"Vazio": 0, "4x SC 500": 2000, "10x SC 50": 500}
+        "peso_base_sem_combustivel": 8600, 
+        "peso_max": 14000, 
+        "consumo_l_min": 10.0, 
+        "vel_cruzeiro_padrao": 370, 
+        "tanque_max_l": 1680,   
+        "climb_rate_default": 3.5, 
+        "descent_rate_default": 5.0,
+        "armamento_fixo": "1x 13mm MG-131 | 3x 7.92mm MG-81J",
+        "modificacoes": {
+            "Padrão": 0, 
+            "Sem Dive Brakes": -60, 
+            "Sem Gôndola Inferior": -123,
+            "Câmera de Reconhecimento": 25
+        },
+        "presets_bombas": {
+            "Vazio": 0, 
+            "4x SC 500": 2000, 
+            "10x SC 50 (Interno)": 500, 
+            "28x SC 50 (Full Load)": 1400,
+            "2x SC 1000": 2180
+        }
     }
-}
-# ==========================================
-# 2.1 BASE DE DADOS: Aeródromos (Rhineland)
-# ==========================================
-db_aerodromos_rhineland = {
-    "Antwerp-Deurne (B52)": 12,
-    "Brussels-Evere (B56)": 55,
-    "Eindhoven (B78)": 20,
-    "Gilze-Rijen (B77)": 15,
-    "Heesch (B88)": 7,
-    "Hopsten": 42,
-    "Münster-Handorf": 48,
-    "Rheine-Bentlage": 35,
-    "Sint-Truiden (B55)": 75,
-    "Ursel (B67)": 29,
-    "Volkel (B80)": 14,
-    "Wesel": 25,
-    "Outro / Manual": 100
 }
 
 # ==========================================
