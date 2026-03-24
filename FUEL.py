@@ -337,52 +337,126 @@ with tab1:
 # ABA 2: CONFIGURAÇÃO DA MIRA (LOFTE 7)
 # ==========================================
 with tab2:
-    # CSS para Sliders Touch-Friendly (Gordos para facilitar o uso no tablet/celular)
     st.markdown("""
         <style>
-            .stSlider [data-baseweb="slider"] { height: 45px; }
-            .stSlider [data-baseweb="thumb"] { height: 40px; width: 40px; background-color: #FF4B4B; }
-            .stMetric { background-color: #1e2124; padding: 15px; border-radius: 10px; border: 1px solid #444; }
+            /* Fundo escuro igual ao site spiff */
+            .lofte-container { background-color: #333333; padding: 20px; border-radius: 8px; }
+
+            /* Knobs grandes e touch-friendly */
+            .stSlider [data-baseweb="slider"] { height: 50px; }
+            .stSlider [data-baseweb="thumb"] { height: 44px; width: 44px; }
+
+            /* Resultado em destaque */
+            .result-box {
+                background-color: #1a1a1a;
+                border: 2px solid #555;
+                border-radius: 8px;
+                padding: 18px;
+                text-align: center;
+            }
+            .result-label { color: #aaaaaa; font-size: 14px; margin-bottom: 4px; }
+            .result-hdg  { color: #EE2222; font-size: 52px; font-weight: bold; line-height: 1; }
+            .result-spd  { color: #33EE33; font-size: 52px; font-weight: bold; line-height: 1; }
+            .result-unit { color: #888888; font-size: 16px; }
+
+            /* Input knob: plane=vermelho, wind=azul, speed=verde */
+            .knob-plane  .stSlider [data-baseweb="thumb"] { background-color: #FF6666 !important; }
+            .knob-wind   .stSlider [data-baseweb="thumb"] { background-color: #6666FF !important; }
+            .knob-speed  .stSlider [data-baseweb="thumb"] { background-color: #66FF66 !important; }
         </style>
     """, unsafe_allow_html=True)
 
-    st.header("🎯 Ajuste de Vento da Mira")
-    st.caption("Ajuste os valores abaixo para obter os parâmetros de entrada do Lofte 7.")
+    # --- Título fiel ao site ---
+    st.markdown("""
+        <div style='background:#333333; padding:14px 20px; border-radius:8px; margin-bottom:16px;'>
+            <h3 style='color:#dddddd; margin:0;'>IL2 BoX Bombsight Wind Calculator</h3>
+            <p style='color:#aaaaaa; margin:6px 0 0 0; font-size:14px;'>
+                Insira a proa do avião, a direção e velocidade do vento para obter o ângulo e
+                velocidade relativa do vento que deve ser inserido na mira.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # --- INPUTS (OS 3 FATORES ESSENCIAIS) ---
-    # Plane Heading: Sua proa atual
-    phead = st.slider("🧭 PLANE HEADING (°)", 0, 360, 0, step=1)
-    
-    # Wind Direction (FROM): De onde o vento vem no mapa
-    whead = st.slider("🌬️ WIND DIRECTION (FROM °)", 0, 360, 0, step=1)
-    
-    # Wind Speed: Velocidade do vento no mapa
-    wspeed = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.1)
+    # ── ENTRADAS: 3 "KNOBS" ──────────────────────────────────────────────────
+    col_ph, col_wh, col_ws = st.columns(3)
 
-    # --- CÁLCULO DO VETOR RELATIVO (LÓGICA SPIFF) ---
-    # O "Sight Wind Hdg" é o ângulo do vento em relação ao nariz do avião
-    # A fórmula inverte o sentido para que o piloto saiba para onde o vento "aponta" no visor
-    sight_wind_hdg = (whead - phead + 360) % 360
-    
-    # No Lofte 7, a velocidade inserida é a velocidade real do vento (m/s)
+    with col_ph:
+        st.markdown("""<p style='text-align:center; color:#FF6666; font-weight:bold;
+                        font-size:15px; margin-bottom:6px;'>✕ Plane Heading</p>""",
+                    unsafe_allow_html=True)
+        phead = st.slider("Plane Heading (°)", 0, 359, 0, step=1,
+                          label_visibility="collapsed", key="phdg_knob")
+        st.markdown(f"""<div style='text-align:center; font-size:40px; font-weight:bold;
+                        color:#FF6666; background:#222; border-radius:50%;
+                        width:100px; height:100px; line-height:100px; margin:auto;'>
+                        {phead}</div>""", unsafe_allow_html=True)
+
+    with col_wh:
+        st.markdown("""<p style='text-align:center; color:#6666FF; font-weight:bold;
+                        font-size:15px; margin-bottom:6px;'>✕ Wind Heading</p>""",
+                    unsafe_allow_html=True)
+        whead = st.slider("Wind Heading (°)", 0, 359, 0, step=1,
+                          label_visibility="collapsed", key="whdg_knob")
+        st.markdown(f"""<div style='text-align:center; font-size:40px; font-weight:bold;
+                        color:#6666FF; background:#222; border-radius:50%;
+                        width:100px; height:100px; line-height:100px; margin:auto;'>
+                        {whead}</div>""", unsafe_allow_html=True)
+
+    with col_ws:
+        st.markdown("""<p style='text-align:center; color:#66FF66; font-weight:bold;
+                        font-size:15px; margin-bottom:6px;'>✕ Wind Speed (m/s)</p>""",
+                    unsafe_allow_html=True)
+        wspeed = st.slider("Wind Speed (m/s)", 0, 30, 0, step=1,
+                           label_visibility="collapsed", key="wspeed_knob")
+        st.markdown(f"""<div style='text-align:center; font-size:40px; font-weight:bold;
+                        color:#66FF66; background:#222; border-radius:50%;
+                        width:100px; height:100px; line-height:100px; margin:auto;'>
+                        {wspeed}</div>""", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── CÁLCULO (lógica idêntica ao site spiff) ───────────────────────────────
+    # 1. Relative wind heading (−179 … +180)
+    raw = (whead - phead) % 360
+    sight_wind_hdg = raw if raw <= 180 else raw - 360
+
+    # 2. Wind speed is used directly (m/s)
     sight_wind_speed = wspeed
 
-    # --- O ÚNICO RESULTADO QUE VOCÊ QUER ---
-    st.divider()
-    
-    res1, res2 = st.columns(2)
-    
-    with res1:
-        st.metric(label="× Sight Wind Hdg", value=f"{sight_wind_hdg}°")
-        st.caption("Gire o seletor de direção na mira para este valor.")
+    # ── RESULTADOS ────────────────────────────────────────────────────────────
+    st.markdown("<p style='font-weight:bold; color:#dddddd; font-size:18px;'>Results</p>",
+                unsafe_allow_html=True)
 
-    with res2:
-        st.metric(label="× Sight Wind Speed", value=f"{sight_wind_speed} m/s")
-        st.caption("Ajuste a força do vento na engrenagem da mira.")
+    r1, _gap, r2 = st.columns([2, 0.5, 2])
 
-    # --- DICA TÁTICA ---
+    with r1:
+        st.markdown(f"""
+            <div class='result-box'>
+                <div class='result-label'>✕ Sight Wind Hdg</div>
+                <div class='result-hdg'>{sight_wind_hdg:+d}</div>
+                <div class='result-unit'>graus</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with r2:
+        st.markdown(f"""
+            <div class='result-box'>
+                <div class='result-label'>✕ Sight Wind Speed</div>
+                <div class='result-spd'>{sight_wind_speed}</div>
+                <div class='result-unit'>m/s</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # ── DICA TÁTICA ───────────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
     if sight_wind_speed > 0:
-        st.info(f"💡 Configure sua mira com **{sight_wind_hdg}°** e **{sight_wind_speed} m/s** antes de iniciar o bomb run.")
+        direcao_txt = "DIREITA ➡️" if sight_wind_hdg > 0 else ("ESQUERDA ⬅️" if sight_wind_hdg < 0 else "FRONTAL ⬆️")
+        st.info(
+            f"💡 **Configure sua mira Lofte 7 com:** Hdg = **{sight_wind_hdg:+d}°** "
+            f"({direcao_txt}) | Speed = **{sight_wind_speed} m/s**"
+        )
+    else:
+        st.info("💡 Sem vento — não é necessário ajuste de vento na mira.")
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
