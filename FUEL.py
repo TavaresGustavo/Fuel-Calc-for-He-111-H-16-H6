@@ -85,39 +85,49 @@ def fetch_combatbox_data():
 
 
 # ==========================================
-# 2. BASE DE DADOS: Aeronaves com Presets VNAV
+# 2. BASE DE DADOS: Aeronaves e Mapas
 # ==========================================
+db_aerodromos_rhineland = {
+    "Antwerp-Deurne (B52)": 12, "Brussels-Evere (B56)": 55, "Eindhoven (B78)": 20,
+    "Gilze-Rijen (B77)": 15, "Heesch (B88)": 7, "Hopsten": 42, "Münster-Handorf": 48,
+    "Rheine-Bentlage": 35, "Sint-Truiden (B55)": 75, "Ursel (B67)": 29, 
+    "Volkel (B80)": 14, "Wesel": 25, "Helmond (B86)": 20, "Venlo": 30
+}
+
 db_avioes = {
     "He-111 H-16": {
         "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, 
         "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
-        "climb_rate_default": 2.5, "descent_rate_default": 4.0, # Presets VNAV
+        "climb_rate_default": 2.5, "descent_rate_default": 4.0,
+        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
         "modificacoes": {"Padrão": 0},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "2x SC 1800": 3560, "1x SC 2500": 2400}
+        "presets_bombas": {"Vazio": 0, "1x SC 2500": 2400, "2x SC 1800": 3560, "32x SC 50": 1600}
     },
     "He-111 H-6": {
         "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, 
         "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
-        "climb_rate_default": 2.5, "descent_rate_default": 4.0, # Presets VNAV
+        "climb_rate_default": 2.5, "descent_rate_default": 4.0,
+        "armamento_fixo": "6x 7.92 mm MG-15",
         "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "2x SC 1000": 2180}
+        "presets_bombas": {"Vazio": 0, "2x SC 1000": 2180, "16x SC 50": 800}
     },
     "Ju-52/3M": {
         "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, 
         "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
-        "climb_rate_default": 2.0, "descent_rate_default": 3.0, # Mais lento
-        "modificacoes": {"Padrão": 0, "Carga Interna": 2300, "12 Paraquedistas": 1200},
+        "climb_rate_default": 2.0, "descent_rate_default": 3.0,
+        "armamento_fixo": "Transporte",
+        "modificacoes": {"Padrão": 0, "Paraquedistas": 1200, "Carga Interna": 2300},
         "presets_bombas": {"Vazio": 0, "10x MAB 250": 2550}
     },
     "Ju-88 A-4": {
         "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, 
         "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
-        "climb_rate_default": 3.5, "descent_rate_default": 5.0, # Mais rápido e robusto
+        "climb_rate_default": 3.5, "descent_rate_default": 5.0,
+        "armamento_fixo": "1x 13mm | 4x 7.92mm",
         "modificacoes": {"Padrão": 0, "Sem Gôndola": -123},
-        "presets_bombas": {"Vazio": 0, "4x SC 500": 2000, "28x SC 50": 1400}
+        "presets_bombas": {"Vazio": 0, "4x SC 500": 2000, "10x SC 50": 500}
     }
 }
-
 # ==========================================
 # 2.1 BASE DE DADOS: Aeródromos (Rhineland)
 # ==========================================
@@ -223,7 +233,7 @@ with tab1:
     with c2:
         mod_sel = st.selectbox("Modificações", list(av['modificacoes'].keys()))
         bomb_sel = st.selectbox("Carga de Bombas", list(av['presets_bombas'].keys()))
-        st.caption(f"🛡️ Armamento Fixo: {av['armamento_fixed'] if 'armamento_fixed' in av else av['armamento_fixo']}")
+        st.caption(f"🛡️ Armamento Fixo: {av.get('armamento_fixo', 'Não listado')}")
         
     # --- Cálculos Logísticos ---
     tempo_estimado = (missao_dist / missao_vel) * 60
@@ -368,134 +378,117 @@ with tab3:
 # ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER)
 # ==========================================
 with tab4:
-    st.header("🚀 Monitor de Execução de Missão (FMC)")
+    st.header("🚀 Flight Management Computer")
     
     if not st.session_state.get('navlog_manual'):
-        st.info("⚠️ Configure ou importe uma rota para ativar o FMC.")
+        st.warning("⚠️ Rota Vazia. Configure a missão nas abas anteriores.")
     else:
-        # Puxamos o avião selecionado na Aba 1
+        # Puxamos o avião selecionado (usando .get para evitar KeyError)
         av_nome = st.session_state.get('av_nome_selecionado', list(db_avioes.keys())[0])
-        av = db_avioes[av_nome]
+        av = db_avioes.get(av_nome, db_avioes["He-111 H-16"])
 
-        # --- NOVA SEÇÃO: SELEÇÃO DE AERÓDROMOS (MAPA) ---
-        with st.expander("🌍 Configuração do Mapa (Rhineland)", expanded=True):
+        # --- SELEÇÃO DE AERÓDROMOS (MAPA) ---
+        with st.expander("🌍 Geografia do Mapa (Rhineland)", expanded=True):
             c_dep, c_arr = st.columns(2)
             with c_dep:
-                base_dep = st.selectbox("Aeródromo de Decolagem:", list(db_aerodromos_rhineland.keys()))
+                base_dep = st.selectbox("Decolagem de:", list(db_aerodromos_rhineland.keys()), key="fmc_dep")
                 alt_dep = db_aerodromos_rhineland[base_dep]
             with c_arr:
-                base_arr = st.selectbox("Aeródromo de Destino:", list(db_aerodromos_rhineland.keys()))
+                base_arr = st.selectbox("Destino final:", list(db_aerodromos_rhineland.keys()), key="fmc_arr")
                 alt_arr = db_aerodromos_rhineland[base_arr]
-            
-            st.caption(f"INFO: Decolagem a {alt_dep}m | Pouso a {alt_arr}m")
 
         # --- PERFORMANCE VERTICAL (VNAV) ---
-        with st.expander("📈 Perfil de Voo & Altitude", expanded=True):
+        with st.expander("📈 Perfil Vertical (VNAV)", expanded=True):
             v1, v2, v3, v4 = st.columns(4)
-            with v1: 
-                alt_cruzeiro = st.number_input("Altitude Cruzeiro (m)", value=4000, step=500)
-            with v2: 
-                climb_rate = st.number_input("Razão Subida (m/s)", 
-                                            value=float(av.get('climb_rate_default', 2.5)))
-            with v3: 
-                descent_rate = st.number_input("Razão Descida (m/s)", 
-                                             value=float(av.get('descent_rate_default', 4.0)))
-            with v4: 
-                # AQUI: Altitude do aeródromo de destino selecionado acima!
-                alt_pista = st.number_input("Alt. Destino (m)", value=alt_arr)
+            with v1: alt_cruzeiro = st.number_input("Cruzeiro (m)", value=4000, step=500)
+            with v2: climb_rate = st.number_input("Razão Subida (m/s)", value=float(av.get('climb_rate_default', 2.5)))
+            with v3: descent_rate = st.number_input("Razão Descida (m/s)", value=float(av.get('descent_rate_default', 4.0)))
+            with v4: alt_pista = st.number_input("Alt. Alvo (m)", value=alt_arr)
 
-        # --- MOTOR DE CÁLCULO DE ROTA ---
-        nav_tas_fmc = float(st.session_state.get('vel_calc', 320))
-        w_dir_fmc = float(st.session_state.get('vento_dir_cb', 45.0))
-        w_spd_fmc = float(st.session_state.get('vento_vel_cb', 5.0) * 3.6)
+        # --- CÁLCULO DE ROTA ---
+        nav_tas = float(st.session_state.get('vel_calc', 320))
+        w_dir = float(st.session_state.get('vento_dir_cb', 45.0))
+        w_spd = float(st.session_state.get('vento_vel_cb', 5.0) * 3.6)
         
         pernas_fmc = []
-        dist_acumulada = 0
+        dist_acum = 0
         for idx, linha in enumerate(st.session_state.navlog_manual):
             try:
                 dist = float(linha.get("Distância (km)", 0.0))
                 tc = float(linha.get("Rumo (TC)", 0.0))
-                wa_rad = math.radians(w_dir_fmc - tc)
-                sin_wca = max(-1.0, min(1.0, (w_spd_fmc * math.sin(wa_rad)) / nav_tas_fmc))
-                wca_deg = math.degrees(math.asin(sin_wca))
-                th_deg = (tc + wca_deg + 360) % 360
-                gs_leg = max(1.0, (nav_tas_fmc * math.cos(math.radians(wca_deg))) - (w_spd_fmc * math.cos(wa_rad)))
-                tempo_seg = (dist / gs_leg) * 3600
-                dist_acumulada += dist
-                pernas_fmc.append({"id": idx, "nome": linha.get("Perna", f"WP{idx}"), "proa": th_deg, "tempo": tempo_seg, "dist_total": dist_acumulada})
+                wa_rad = math.radians(w_dir - tc)
+                sin_wca = max(-1.0, min(1.0, (w_spd * math.sin(wa_rad)) / nav_tas))
+                wca = math.degrees(math.asin(sin_wca))
+                th = (tc + wca + 360) % 360
+                gs = max(1.0, (nav_tas * math.cos(math.radians(wca))) - (w_spd * math.cos(wa_rad)))
+                tempo = (dist / gs) * 3600
+                dist_acum += dist
+                pernas_fmc.append({"id": idx, "nome": linha.get("Perna", f"WP{idx}"), "proa": th, "tempo": tempo, "dist_total": dist_acum})
             except: continue
 
-        # --- GRÁFICO DE PERFIL (VNAV) ---
+        # --- GRÁFICO VNAV ---
         if pernas_fmc:
             total_km = pernas_fmc[-1]['dist_total']
-            # Distância de subida/descida baseada nos aeródromos escolhidos
-            dist_climb = ((alt_cruzeiro - alt_dep) / climb_rate) * (nav_tas_fmc / 3600)
-            dist_descent = ((alt_cruzeiro - alt_arr) / descent_rate) * (nav_tas_fmc / 3600)
+            dist_climb = ((alt_cruzeiro - alt_dep) / climb_rate) * (nav_tas / 3600)
+            dist_descent = ((alt_cruzeiro - alt_arr) / descent_rate) * (nav_tas / 3600)
             
             df_vnav = pd.DataFrame({
                 "Distância (km)": [0, dist_climb, max(dist_climb, total_km - dist_descent), total_km],
                 "Altitude (m)": [alt_dep, alt_cruzeiro, alt_cruzeiro, alt_arr]
             })
             st.area_chart(df_vnav.set_index("Distância (km)"))
-            st.caption(f"🏔️ TOC: {dist_climb:.1f} km (após decolagem de {base_dep}) | 📉 TOD: {total_km - dist_descent:.1f} km (para {base_arr})")
 
         st.divider()
-        
-        # 2. HUD DE EXECUÇÃO (CRONÓMETRO ATIVO)
+
+        # --- HUD DE EXECUÇÃO E ALERTA DE COMBUSTÍVEL ---
         @st.fragment(run_every="1s")
-        def monitor_fmc_ativo():
-            idx_ativo = st.session_state.index_perna_ativa
-            
-            if idx_ativo >= len(pernas_fmc):
-                st.balloons()
-                st.success("🏁 MISSÃO CUMPRIDA! TODOS OS WAYPOINTS ATINGIDOS.")
-                if st.button("🔄 Reiniciar FMC"):
-                    st.session_state.index_perna_ativa = 0
-                    st.session_state.cronometro_rodando = False
-                    st.rerun()
-                return
+        def fmc_hud_final():
+            idx = st.session_state.index_perna_ativa
+            if idx < len(pernas_fmc):
+                p = pernas_fmc[idx]
+                h1, h2, h3 = st.columns([2, 1, 1])
+                
+                with h1:
+                    st.subheader(f"📍 Perna: {p['nome']}")
+                    st.markdown(f"## 🧭 PROA: {p['proa']:.0f}°")
+                
+                with h2:
+                    if st.session_state.cronometro_rodando:
+                        passado = time.time() - st.session_state.tempo_inicio_perna
+                        restante = max(0, p['tempo'] - passado)
+                        
+                        # --- LÓGICA DE ALERTA DE COMBUSTÍVEL ---
+                        # Se o tempo total de missão restante for maior que o combustível planejado
+                        tempo_total_restante_seg = sum(leg['tempo'] for leg in pernas_fmc[idx:]) - passado
+                        comb_disponivel = st.session_state.get('comb_litros_total', 1000) # Puxado da Aba 1
+                        autonomia_seg = (comb_disponivel / av['consumo_l_min']) * 60
+                        
+                        if tempo_total_restante_seg > autonomia_seg:
+                            st.error("🚨 COMBUSTÍVEL INSUFICIENTE!")
+                        elif tempo_total_restante_seg > (autonomia_seg * 0.8):
+                            st.warning("⚠️ RESERVA SENDO CONSUMIDA")
+                        
+                        m, s = divmod(int(restante), 60)
+                        st.metric("Tempo WP", f"{m:02d}:{s:02d}")
+                    else:
+                        m, s = divmod(int(p['tempo']), 60)
+                        st.metric("ETE", f"{m:02d}:{s:02d}")
 
-            p = pernas_fmc[idx_ativo]
-            h1, h2, h3 = st.columns([2, 1, 1])
-            
-            with h1:
-                st.subheader(f"📍 Ativo: {p['nome']}")
-                st.markdown(f"## 🧭 PROA: **{p['proa']:.0f}°**")
-                st.caption(f"Perna {idx_ativo + 1} de {len(pernas_fmc)}")
-            
-            with h2:
-                if st.session_state.cronometro_rodando:
-                    decorrido = time.time() - st.session_state.tempo_inicio_perna
-                    restante = max(0, p['tempo'] - decorrido)
-                    m, s = divmod(int(restante), 60)
-                    st.metric("Tempo para WP", f"{m:02d}:{s:02d}")
-                    if restante <= 0: 
-                        st.toast(f"🔔 WP ATINGIDO! Curvar para {p['proa']:.0f}°", icon="⚠️")
-                else:
-                    m, s = divmod(int(p['tempo']), 60)
-                    st.metric("Estimativa (ETE)", f"{m:02d}:{s:02d}")
+                with h3:
+                    if not st.session_state.cronometro_rodando:
+                        if st.button("▶️ START", use_container_width=True):
+                            st.session_state.cronometro_rodando = True
+                            st.session_state.tempo_inicio_perna = time.time()
+                            st.rerun()
+                    else:
+                        if st.button("⏭️ NEXT", use_container_width=True):
+                            st.session_state.index_perna_ativa += 1
+                            st.session_state.tempo_inicio_perna = time.time()
+                            st.rerun()
+            else:
+                st.success("🏁 Objetivo Atingido!")
 
-            with h3:
-                # Controles de Voo
-                if not st.session_state.cronometro_rodando:
-                    if st.button("▶️ START PERNA", use_container_width=True):
-                        st.session_state.cronometro_rodando = True
-                        st.session_state.tempo_inicio_perna = time.time()
-                        st.rerun()
-                else:
-                    if st.button("⏭️ PRÓXIMA", use_container_width=True):
-                        st.session_state.index_perna_ativa += 1
-                        st.session_state.tempo_inicio_perna = time.time()
-                        st.rerun()
-                    if st.button("⏹️ ABORTAR", use_container_width=True):
-                        st.session_state.cronometro_rodando = False
-                        st.rerun()
-
-            # Mini Progress Bar da Missão
-            progresso = (idx_ativo / len(pernas_fmc))
-            st.progress(progresso, text=f"Progresso da Rota: {int(progresso*100)}%")
-
-        monitor_fmc_ativo()
+        fmc_hud_final()
 # ==========================================
 # ABA 5: INTELIGÊNCIA GLOBAL (C4ISR)
 # ==========================================
