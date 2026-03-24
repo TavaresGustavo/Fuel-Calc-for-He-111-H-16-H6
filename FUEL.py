@@ -311,52 +311,6 @@ with tab3:
             st.warning(f"**{val_conv} pés** = {val_conv / 3.28084:.0f} metros")
             
 with col_b:
-            st.subheader("🛫 Infraestrutura da Base")
-            bases = dados.get('Airfields', [])
-            if bases:
-                base_sel = st.selectbox("Inspecionar Base:", [b.get('Name', 'Base') for b in bases])
-                dados_base = next((b for b in bases if b.get('Name') == base_sel), None)
-                
-                if dados_base:
-                    # --- NOVO: SISTEMA DE ALERTA DE ATAQUE ---
-                    # Tenta ler as chaves mais comuns de ataque no servidor
-                    sob_ataque = dados_base.get('UnderAttack', False)
-                    if not sob_ataque: # Fallback caso a chave tenha outro nome
-                        sob_ataque = dados_base.get('IsUnderAttack', False)
-                        
-                    if sob_ataque:
-                        st.error("🚨 **ALERTA MÁXIMO: BASE SOB ATAQUE!** 🚨\n\nRisco extremo de 'Vulching' (ataque na pista).")
-                    else:
-                        st.success("✅ **Status: Base Segura**")
-                    
-                    st.divider()
-                    
-                    # 1. Extração dos Dados Físicos da Base
-                    supply = dados_base.get('SupplyLevel', 0)
-                    bearing = dados_base.get('RunwayBearing', 0)
-                    is_concrete = dados_base.get('RunwayIsConcrete', False)
-                    
-                    # 2. Cálculos e Formatação
-                    bearing_opp = (bearing + 180) % 360
-                    tipo_pista = "🛣️ Concreto / Asfalto" if is_concrete else "🌱 Grama / Terra"
-                    
-                    # 3. Desenho da UI
-                    st.caption("Detalhes da Pista")
-                    st.write(f"**Proa (Alinhamento):** {bearing:03.0f}° / {bearing_opp:03.0f}°")
-                    st.write(f"**Superfície:** {tipo_pista}")
-                    
-                    supply_val = max(0, min(100, int(supply)))
-                    st.progress(supply_val / 100.0, text=f"📦 Nível de Suprimentos: {supply_val}%")
-                    
-                    st.divider()
-                    
-                    # 4. Inventário do Hangar
-                    st.caption("Aeronaves no Hangar")
-                    avioes_base = dados_base.get('AvailableAirframes', [])
-                    if avioes_base:
-                        for av in avioes_base:
-                            st.write(f"- {av.get('Type', 'Aeronave')}: **{av.get('NumberAvailable', 0)}** unid.")
-                    else:
-                        st.write("Sem aeronaves listadas.")
+            
     else:
         st.info("Aguardando sincronização automática com o servidor...")
