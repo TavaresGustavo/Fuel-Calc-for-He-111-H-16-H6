@@ -94,25 +94,28 @@ def fetch_combatbox_data():
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
 
 def calcular_rumo_e_distancia(p1, p2):
-    # Coordenadas em radianos
-    lat1, lon1 = math.radians(p1['lat']), math.radians(p1['lng'])
-    lat2, lon2 = math.radians(p2['lat']), math.radians(p2['lng'])
+    # No IL-2 e planners, tratamos lat/lng como um grid X, Y plano
+    # lng = X (Leste/Oeste)
+    # lat = Y (Norte/Sul)
     
-    dlon = lon2 - lon1
+    dx = p2['lng'] - p1['lng']
+    dy = p2['lat'] - p1['lat']
     
-    # Cálculo da Proa (Bearing)
-    y = math.sin(dlon) * math.cos(lat2)
-    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
-    rumo = (math.degrees(math.atan2(y, x)) + 360) % 360
+    # 1. CÁLCULO DO RUMO (Bearing Cartesiano)
+    # O math.atan2(dx, dy) calcula o ângulo a partir do topo (Norte = 0°)
+    rumo_rad = math.atan2(dx, dy)
+    rumo_deg = math.degrees(rumo_rad)
     
-    # Cálculo da Distância (Haversine - em km)
-    # Nota: No IL-2 Rheinland, a escala pode variar, mas 6371km é o padrão terra.
-    a = math.sin((lat2 - lat1) / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    distancia = 6371 * c 
+    # Normaliza para 0-360°
+    rumo_final = (rumo_deg + 360) % 360
     
-    return rumo, distancia
-
+    # 2. CÁLCULO DA DISTÂNCIA (Pitágoras)
+    # No seu JSON, as coordenadas estão em graus decimais.
+    # 1 grau de latitude/longitude no mapa Rheinland equivale a ~111.12 km
+    dist_raw = math.sqrt(dx**2 + dy**2)
+    distancia_km = dist_raw * 111.12 
+    
+    return rumo_final, distancia_km
 
 # ==========================================
 # 2.1 BASE DE DADOS DEFINITIVA (ALTITUDES)
