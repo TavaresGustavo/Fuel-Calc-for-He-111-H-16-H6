@@ -32,49 +32,112 @@ if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = N
 
 
 # ==========================================
-# 1. FUNÇÕES DA API E TRADUÇÃO
+# ABA 1: HANGAR (LOGÍSTICA E PREPARAÇÃO)
 # ==========================================
-@st.cache_data(ttl=3600)
-def traduzir_texto(texto):
-    if not texto or texto.strip() == "":
-        return ""
-    try:
-        tradutor = GoogleTranslator(source='en', target='pt')
-        return tradutor.translate(texto)
-    except Exception:
-        return texto 
-
-def fetch_combatbox_data():
-    try:
-        api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
-        response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
+with tab1:
+    st.header("🛠️ Configuração de Carga e Rota")
+    
+    # --- Secção de Importação e Gestão de Ficheiros ---
+    col_f, col_clear = st.columns([3, 1])
+    with col_f: 
+        arquivo_plano = st.file_uploader("📥 Importar Rota (.json)", type=["json"], help="Suporta ficheiros do Mission Planner ou exportações nativas.")
         
-        if response.status_code != 200:
-            st.session_state.status_cb = f"❌ Erro HTTP {response.status_code}"
-            return
+        if arquivo_plano is not None:
+            file_content = arquivo_plano.getvalue()
+            current_hash = hash(file_content)
             
-        dados_json = response.json()
-        st.session_state.dados_campanha = dados_json 
-        
-        weather_hoje = dados_json.get("Weather", {})
-        wind_hoje = weather_hoje.get("WindAtGroundLevel", {})
-        st.session_state.temp_cb = float(weather_hoje.get("Temperature", 15.0))
-        st.session_state.vento_vel_cb = float(wind_hoje.get("Speed", 5.0))
-        st.session_state.vento_dir_cb = float(wind_hoje.get("Bearing", 45.0))
-        st.session_state.nuvens_hoje_cb = weather_hoje.get("CloudDescription", "N/D")
-
-        weather_amanha = dados_json.get("WeatherTomorrow", {})
-        wind_amanha = weather_amanha.get("WindAtGroundLevel", {})
-        st.session_state.temp_amanha_cb = float(weather_amanha.get("Temperature", 15.0))
-        st.session_state.vento_vel_amanha_cb = float(wind_amanha.get("Speed", 5.0))
-        st.session_state.vento_dir_amanha_cb = float(wind_amanha.get("Bearing", 45.0))
-        st.session_state.nuvens_amanha_cb = weather_amanha.get("CloudDescription", "N/D")
-        
-        st.session_state.status_cb = "✅ API Sincronizada! Telemetria AO VIVO."
+            # Evita recarregar se o ficheiro for o mesmo
+            if st.session_state.last_file_hash != current_hash:
+                st.session_state.last_file_hash = current_hash
+                try:
+                    dados_plano = json.loads(file_content)
+                    
+                    # Lógica de deteção de formato
+                    if "routes" in dados_plano: # Formato Mission Planner
+                        rota = dados_plano["routes"][0]
+                        coords = rota["latLngs"]
+                        navlog_temp = []
+                        dist_total = 0.0
+                        
+                        for i in range(len(coords)-1):
+                            dx = coords[i+1]['lng'] - coords[i]['lng']
+                            dy = coords[i+1]['lat'] - coords[i]['lat']
+                            # Fator de conversão aproximado para km no mapa do IL-2
+                            d_perna = math.hypot(dx, dy) * 3.0 
+                            dist_total += d_perna
+                            tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
+                            navlog_temp.append({
+                                "Perna": f"WP{i} ➔ WP{i+1}", 
+                                "Distância (km)": round(d_perna, 1), 
+                                "Rumo (TC)": round(tc_deg, 0)
+                            })
+                        st.session_state.navlog_manual = navlog_temp
+                        st.session_state.dist_calc = dist_total
+                        st.session_state.vel_calc = float(rota.get("speed", 320.0))
+                    else: # Formato Nativo (Lista de dicionários)
+                        st.session_state.navlog_manual = dados_plano
+                        st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
+                    
+                    st.success("✅ Rota tática importada e processada!")
+                except Exception as e:
+                    st.error(f"Erro ao processar JSON: {e}")
             
-    except Exception as e:
-        st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
+    with col_clear:
+        if st.button("🗑️ Limpar Rota", use_container_width=True): 
+            st.session_state.navlog_manual = []
+            st.session_state.index_perna_ativa = 0
+            st.session_state.dist_calc = 100.0
+            st.rerun()
 
+    st.divider()
+    
+    # --- Configuração da Aeronave e Performance ---
+    c1, c2 = st.columns(2)
+    with c1:
+        av_nome = st.selectbox("Selecione a Aeronave", list(db_avioes.keys()))
+        av = db_avioes[av_nome]
+        
+        # Inputs de missão (preenchidos automaticamente se houver importação)
+        missao_dist = st.number_input("Distância da Missão (km)", value=float(st.session_state.dist_calc), min_value=1.0)
+        missao_vel = st.number_input("Velocidade de Cruzeiro (km/h)", value=float(av['vel']))
+        margem_seguranca = st.slider("Margem de Reserva de Combustível (%)", 0, 100, 30)
+    
+    with c2:
+        mod_escolhida = st.selectbox("Modificações (Field Mods)", list(av['mods'].keys()))
+        bomba_escolhida = st.selectbox("Configuração de Bombas", list(av['bombas'].keys()))
+        
+    # --- Cálculos Logísticos ---
+    # Tempo estimado em minutos
+    tempo_estimado_min = (missao_dist / missao_vel) * 60
+    # Combustível: Tempo * Consumo/Min * (1 + Margem)
+    combustivel_l = tempo_estimado_min * av['cons'] * (1 + (margem_seguranca / 100))
+    # Peso do combustível (Densidade padrão 0.72 kg/l)
+    peso_comb = combustivel_l * 0.72
+    
+    # Peso Final = Base + Mods + Bombas + Combustível
+    peso_final_decolagem = av['base_weight'] if 'base_weight' in av else av['peso_base']
+    peso_final_decolagem += av['mods'][mod_escolhida] + av['bombas'][bomba_escolhida] + peso_comb
+    
+    st.divider()
+    
+    # --- Painel de Resultados ---
+    res_col1, res_col2 = st.columns(2)
+    
+    with res_col1:
+        if peso_final_decolagem <= av['peso_max']:
+            st.success(f"⚖️ **Peso de Decolagem:** {peso_final_decolagem:.0f} kg")
+            st.caption(f"Limite Máximo: {av['peso_max']} kg")
+        else:
+            st.error(f"⚠️ **SOBRECARGA DETETADA:** {peso_final_decolagem:.0f} kg")
+            st.caption(f"Excede o limite em {peso_final_decolagem - av['peso_max']:.0f} kg")
+
+    with res_col2:
+        st.info(f"⛽ **Abastecimento:** {combustivel_l:.0f} Litros")
+        st.caption(f"Estimativa para {tempo_estimado_min:.0f} min de voo com reserva.")
+
+    st.divider()
+    st.markdown(f"**Resumo Técnico:** {av_nome} com {mod_escolhida} e {bomba_escolhida}.")
+    
 # ==========================================
 # 2. BASE DE DADOS: Pesos e Aeronaves
 # ==========================================
@@ -298,75 +361,81 @@ with tab3:
             st.warning(f"**{val_conv} pés** = {val_conv / 3.28084:.0f} metros")
 
 # ==========================================
-# ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER)
+# ==========================================
+# ABA 4: FMC (FLIGHT MANAGEMENT COMPUTER) - COMPLETO
 # ==========================================
 with tab4:
-    st.header("🚀 Execução de Missão (FMC)")
+    st.header("🚀 Monitor de Execução de Missão (FMC)")
     
-    # --- Parâmetros de Performance Vertical ---
-    with st.expander("⚙️ Perfil de Subida e Descida (VNAV)", expanded=False):
-        c1, c2, c3, c4 = st.columns(4)
-        with c1: alt_cruzeiro = st.number_input("Altitude Cruzeiro (m)", value=4000, step=500)
-        with c2: climb_rate = st.number_input("Razão Subida (m/s)", value=2.5, step=0.5)
-        with c3: descent_rate = st.number_input("Razão Descida (m/s)", value=4.0, step=0.5)
-        with c4: alt_pista = st.number_input("Alt. Destino (m)", value=100, step=50)
+    if not st.session_state.get('navlog_manual'):
+        st.info("⚠️ O FMC está em standby. Importe uma rota na Aba 1 ou crie pernas na Aba 3 para começar.")
+    else:
+        # 1. PARÂMETROS DE PERFORMANCE VERTICAL (VNAV)
+        with st.expander("📈 Perfil de Voo & Altitude (VNAV)", expanded=True):
+            v1, v2, v3, v4 = st.columns(4)
+            with v1: alt_cruzeiro = st.number_input("Altitude Cruzeiro (m)", value=4000, step=500)
+            with v2: climb_rate = st.number_input("Razão de Subida (m/s)", value=2.5, step=0.5)
+            with v3: descent_rate = st.number_input("Razão de Descida (m/s)", value=4.0, step=0.5)
+            with v4: alt_pista = st.number_input("Alt. Aeródromo (m)", value=100, step=50)
 
-    # --- Motor de Cálculo de Rota ---
-    pernas_fmc = []
-    dist_total_acumulada = 0
-    
-    # Puxamos o vento atual do servidor para os cálculos
-    nav_tas_fmc = float(st.session_state.get('vel_calc', 320))
-    w_dir_fmc = float(st.session_state.vento_dir_cb)
-    w_spd_fmc = float(st.session_state.vento_vel_cb * 3.6) # Convertido para km/h
+            # --- MOTOR DE CÁLCULO DE ROTA (E6B INTEGRADO) ---
+            # Pegamos o vento e performance para calcular a trigonometria de cada perna
+            nav_tas_fmc = float(st.session_state.get('vel_calc', 320))
+            w_dir_fmc = float(st.session_state.vento_dir_cb)
+            w_spd_fmc = float(st.session_state.vento_vel_cb * 3.6) # Converter m/s para km/h
+            
+            pernas_fmc = []
+            dist_acumulada = 0
+            
+            for idx, linha in enumerate(st.session_state.navlog_manual):
+                try:
+                    dist = float(linha.get("Distância (km)", 0.0))
+                    tc = float(linha.get("Rumo (TC)", 0.0))
+                    
+                    # Cálculo do Triângulo de Ventos (WCA e GS)
+                    wa_rad = math.radians(w_dir_fmc - tc)
+                    sin_wca = max(-1.0, min(1.0, (w_spd_fmc * math.sin(wa_rad)) / nav_tas_fmc))
+                    wca_deg = math.degrees(math.asin(sin_wca))
+                    th_deg = (tc + wca_deg + 360) % 360
+                    gs_leg = max(1.0, (nav_tas_fmc * math.cos(math.radians(wca_deg))) - (w_spd_fmc * math.cos(wa_rad)))
+                    tempo_seg = (dist / gs_leg) * 3600
+                    
+                    dist_acumulada += dist
+                    pernas_fmc.append({
+                        "id": idx,
+                        "nome": linha.get("Perna", f"WP {idx}"),
+                        "proa": th_deg,
+                        "tempo": tempo_seg,
+                        "dist_total": dist_acumulada
+                    })
+                except: continue
 
-    if st.session_state.navlog_manual:
-        for idx, linha in enumerate(st.session_state.navlog_manual):
-            try:
-                dist = float(linha.get("Distância (km)", 0.0))
-                tc = float(linha.get("Rumo (TC)", 0.0))
+            # --- GRÁFICO DE PERFIL VERTICAL ---
+            if pernas_fmc:
+                total_missao_km = pernas_fmc[-1]['dist_total']
+                # Cálculo de TOC (Top of Climb) e TOD (Top of Descent)
+                # Distância = (Tempo de subida) * Velocidade
+                dist_subida = ((alt_cruzeiro - alt_pista) / climb_rate) * (nav_tas_fmc / 3600)
+                dist_descida = ((alt_cruzeiro - alt_pista) / descent_rate) * (nav_tas_fmc / 3600)
                 
-                # Trigonometria de Vento (E6B Interno)
-                wa = math.radians(w_dir_fmc - tc)
-                sin_wca = max(-1.0, min(1.0, (w_spd_fmc * math.sin(wa)) / nav_tas_fmc))
-                wca = math.degrees(math.asin(sin_wca))
-                th = (tc + wca + 360) % 360
-                gs = max(1.0, (nav_tas_fmc * math.cos(math.radians(wca))) - (w_spd_fmc * math.cos(wa)))
-                tempo_seg = (dist / gs) * 3600
-                
-                dist_total_acumulada += dist
-                pernas_fmc.append({
-                    "id": idx, "nome": linha.get("Perna", f"WP{idx}"),
-                    "proa": th, "tempo": tempo_seg, "dist_acum": dist_total_acumulada
+                df_vnav = pd.DataFrame({
+                    "Distância (km)": [0, dist_subida, max(dist_subida, total_missao_km - dist_descida), total_missao_km],
+                    "Altitude (m)": [alt_pista, alt_cruzeiro, alt_cruzeiro, alt_pista]
                 })
-            except: continue
-
-    if pernas_fmc:
-        # --- Gráfico de Perfil de Voo ---
-        dist_climb = ((alt_cruzeiro - alt_pista) / climb_rate) * (nav_tas_fmc / 3600)
-        dist_descent = ((alt_cruzeiro - alt_pista) / descent_rate) * (nav_tas_fmc / 3600)
-        total_km = pernas_fmc[-1]['dist_acum']
-
-        df_vnav = pd.DataFrame({
-            "Distância (km)": [0, dist_climb, max(dist_climb, total_km - dist_descent), total_km],
-            "Altitude (m)": [alt_pista, alt_cruzeiro, alt_cruzeiro, alt_pista]
-        })
-        st.area_chart(df_vnav.set_index("Distância (km)"))
-        
-        c_t1, c_t2 = st.columns(2)
-        with c_t1: st.caption(f"🏔️ Nivelar aos: {dist_climb:.1f} km")
-        with c_t2: st.caption(f"📉 Iniciar Descida aos: {total_km - dist_descent:.1f} km")
+                st.area_chart(df_vnav.set_index("Distância (km)"))
+                st.caption(f"🏔️ TOC: {dist_subida:.1f} km | 📉 TOD: {total_missao_km - dist_descida:.1f} km")
 
         st.divider()
 
-        # --- HUD DE EXECUÇÃO (Cronómetro Ativo) ---
+        # 2. HUD DE EXECUÇÃO (CRONÓMETRO ATIVO)
         @st.fragment(run_every="1s")
-        def hud_ativo():
+        def monitor_fmc_ativo():
             idx_ativo = st.session_state.index_perna_ativa
             
             if idx_ativo >= len(pernas_fmc):
-                st.success("🏁 MISSÃO CONCLUÍDA!")
-                if st.button("🔄 Reiniciar Missão"):
+                st.balloons()
+                st.success("🏁 MISSÃO CUMPRIDA! TODOS OS WAYPOINTS ATINGIDOS.")
+                if st.button("🔄 Reiniciar FMC"):
                     st.session_state.index_perna_ativa = 0
                     st.session_state.cronometro_rodando = False
                     st.rerun()
@@ -376,114 +445,141 @@ with tab4:
             h1, h2, h3 = st.columns([2, 1, 1])
             
             with h1:
-                st.subheader(f"📍 Atual: {p['nome']}")
-                st.markdown(f"## 🧭 PROA: {p['proa']:.0f}°")
+                st.subheader(f"📍 Ativo: {p['nome']}")
+                st.markdown(f"## 🧭 PROA: **{p['proa']:.0f}°**")
+                st.caption(f"Perna {idx_ativo + 1} de {len(pernas_fmc)}")
             
             with h2:
                 if st.session_state.cronometro_rodando:
-                    passado = time.time() - st.session_state.tempo_inicio_perna
-                    restante = max(0, p['tempo'] - passado)
+                    decorrido = time.time() - st.session_state.tempo_inicio_perna
+                    restante = max(0, p['tempo'] - decorrido)
                     m, s = divmod(int(restante), 60)
                     st.metric("Tempo para WP", f"{m:02d}:{s:02d}")
-                    if restante <= 0: st.toast("⚠️ WP ATINGIDO! CURVAR AGORA!", icon="🔔")
+                    if restante <= 0: 
+                        st.toast(f"🔔 WP ATINGIDO! Curvar para {p['proa']:.0f}°", icon="⚠️")
                 else:
                     m, s = divmod(int(p['tempo']), 60)
-                    st.metric("ETE Estimado", f"{m:02d}:{s:02d}")
+                    st.metric("Estimativa (ETE)", f"{m:02d}:{s:02d}")
 
             with h3:
+                # Controles de Voo
                 if not st.session_state.cronometro_rodando:
-                    if st.button("▶️ START", use_container_width=True):
+                    if st.button("▶️ START PERNA", use_container_width=True):
                         st.session_state.cronometro_rodando = True
                         st.session_state.tempo_inicio_perna = time.time()
                         st.rerun()
                 else:
-                    if st.button("⏭️ NEXT", use_container_width=True):
+                    if st.button("⏭️ PRÓXIMA", use_container_width=True):
                         st.session_state.index_perna_ativa += 1
                         st.session_state.tempo_inicio_perna = time.time()
                         st.rerun()
-                    if st.button("⏹️ ABORT", use_container_width=True):
+                    if st.button("⏹️ ABORTAR", use_container_width=True):
                         st.session_state.cronometro_rodando = False
                         st.rerun()
 
-        hud_ativo()
-    else:
-        st.info("Crie uma rota na Aba 3 ou importe um plano na Aba 1 para ativar o FMC.")
+            # Mini Progress Bar da Missão
+            progresso = (idx_ativo / len(pernas_fmc))
+            st.progress(progresso, text=f"Progresso da Rota: {int(progresso*100)}%")
 
+        monitor_fmc_ativo()
 # ==========================================
-# ABA 5: INTELIGÊNCIA GLOBAL E BRIEFINGS
+# ABA 5: INTELIGÊNCIA GLOBAL (C4ISR)
 # ==========================================
 with tab5:
     st.header("🌐 Inteligência Tática e Logística")
+    
     if st.session_state.dados_campanha:
         dados = st.session_state.dados_campanha
         
-        st.subheader("📜 Briefing do Comando (Traduzido)")
+        # --- 1. BRIEFING DO COMANDO (TRADUZIDO) ---
+        st.subheader("📜 Relatório de Operações")
         texto_hoje = dados.get('CurrentDayStateDescription', '')
         texto_ontem = dados.get('PreviousDaysEventsDescription', '')
         
-        if texto_hoje: st.info(traduzir_texto(texto_hoje))
+        if texto_hoje:
+            with st.container():
+                st.info(f"**Briefing Atual:**\n\n{traduzir_texto(texto_hoje)}")
+        
         if texto_ontem:
-            with st.expander("Ver Resumo do Dia Anterior"): st.write(traduzir_texto(texto_ontem))
-                
+            with st.expander("Ver Resumo das Operações Anteriores"):
+                st.write(traduzir_texto(texto_ontem))
+        
         st.divider()
         
-        st.subheader("⛅ Quadro Meteorológico")
-        c_hoje, c_amanha = st.columns(2)
-        with c_hoje:
-            st.info(f"**MISSÃO ATUAL (HOJE)**\n\nNuvens: {traduzir_texto(st.session_state.nuvens_hoje_cb)}\n\nTemp: {st.session_state.temp_cb} °C | Vento: {st.session_state.vento_vel_cb} m/s a {st.session_state.vento_dir_cb}°")
-        with c_amanha:
-            st.warning(f"**PRÓXIMA MISSÃO (AMANHÃ)**\n\nNuvens: {traduzir_texto(st.session_state.nuvens_amanha_cb)}\n\nTemp: {st.session_state.temp_amanha_cb} °C | Vento: {st.session_state.vento_dir_amanha_cb} m/s a {st.session_state.vento_dir_amanha_cb}°")
+        # --- 2. OBJETIVOS E INFRAESTRUTURA ---
+        col_obj, col_base = st.columns([1, 1])
+        
+        with col_obj:
+            st.subheader("🎯 Objetivos Estratégicos")
+            st.caption("Alvos ativos para a missão atual")
             
-        st.divider()
-        
-        col_t, col_b = st.columns([1, 1])
-        with col_t:
-            st.subheader("🎯 Objetivos Terrestres")
             objetivos = dados.get('Objectives', [])
             objetivos_ativos = [o for o in objetivos if o.get('ActiveToday') == True]
-            for obj in objetivos_ativos[:6]:
-                coalizao = str(obj.get('Coalition', '')).strip().lower()
-                icone = "🔵 Aliado" if coalizao in ['allied', 'allies'] else "🔴 Eixo" if coalizao == 'axis' else "⚪ Neutro"
-                tipo_traduzido = traduzir_texto(obj.get('Type', 'Instalação'))
-                st.error(f"**{obj.get('Name', 'Alvo')}** ({tipo_traduzido}) - {icone}")
+            
+            if objetivos_ativos:
+                for obj in objetivos_ativos[:10]: # Mostra os 10 principais
+                    # Filtro de Coalizão Robusto
+                    coal = str(obj.get('Coalition', '')).strip().lower()
+                    if coal in ['allied', 'allies']:
+                        icone = "🔵 Aliado"
+                    elif coal == 'axis':
+                        icone = "🔴 Eixo"
+                    else:
+                        icone = "⚪ Neutro"
+                    
+                    tipo = traduzir_texto(obj.get('Type', 'Instalação'))
+                    st.error(f"**{obj.get('Name', 'Alvo')}** ({tipo}) - {icone}")
+            else:
+                st.write("Nenhum objetivo terrestre prioritário listado.")
+
+        with col_base:
+            st.subheader("🛫 Gestão de Aeródromos")
+            airfields = dados.get('Airfields', [])
+            
+            if airfields:
+                lista_nomes_bases = [b.get('Name', 'Base') for b in airfields]
+                base_selecionada = st.selectbox("Inspecionar Base:", lista_nomes_bases)
                 
-        with col_b:
-            st.subheader("🛫 Infraestrutura da Base")
-            bases = dados.get('Airfields', [])
-            if bases:
-                base_sel = st.selectbox("Inspecionar Base:", [b.get('Name', 'Base') for b in bases])
-                dados_base = next((b for b in bases if b.get('Name') == base_sel), None)
+                # Localiza os dados da base escolhida
+                b_dados = next((b for b in airfields if b.get('Name') == base_selecionada), None)
                 
-                if dados_base:
-                    # Sistema de Alerta
-                    sob_ataque = dados_base.get('UnderAttack', False) or dados_base.get('IsUnderAttack', False)
+                if b_dados:
+                    # --- Status de Alerta ---
+                    sob_ataque = b_dados.get('UnderAttack', False) or b_dados.get('IsUnderAttack', False)
                     if sob_ataque:
-                        st.error("🚨 **ALERTA MÁXIMO: BASE SOB ATAQUE!** 🚨")
+                        st.error("🚨 **ALERTA: BASE SOB ATAQUE INIMIGO!** 🚨")
                     else:
                         st.success("✅ **Status: Base Segura**")
                     
                     st.divider()
                     
-                    # Detalhes da Pista
-                    supply = dados_base.get('SupplyLevel', 0)
-                    bearing = dados_base.get('RunwayBearing', 0)
-                    is_concrete = dados_base.get('RunwayIsConcrete', False)
-                    tipo_pista = "🛣️ Concreto / Asfalto" if is_concrete else "🌱 Grama / Terra"
+                    # --- Dados da Pista ---
+                    brg = b_dados.get('RunwayBearing', 0)
+                    is_conc = b_dados.get('RunwayIsConcrete', False)
+                    tipo_piso = "🛣️ Concreto / Asfalto" if is_conc else "🌱 Grama / Terra"
                     
-                    st.caption("Detalhes da Pista")
-                    st.write(f"**Proa:** {bearing:03.0f}° / {(bearing + 180) % 360:03.0f}°")
-                    st.write(f"**Superfície:** {tipo_pista}")
-                    st.progress(max(0, min(100, int(supply))) / 100.0, text=f"📦 Suprimentos: {supply}%")
+                    st.caption("Configuração da Pista")
+                    st.write(f"**Proa (QDM):** {brg:03.0f}° / {(brg + 180) % 360:03.0f}°")
+                    st.write(f"**Superfície:** {tipo_piso}")
+                    
+                    # --- Nível de Suprimentos (Barra Visual) ---
+                    sup_val = max(0, min(100, int(b_dados.get('SupplyLevel', 0))))
+                    st.progress(sup_val / 100.0, text=f"📦 Logística / Suprimentos: {sup_val}%")
                     
                     st.divider()
                     
-                    # Inventário
-                    st.caption("Aeronaves no Hangar")
-                    avioes_base = dados_base.get('AvailableAirframes', [])
-                    if avioes_base:
-                        for av in avioes_base:
-                            st.write(f"- {av.get('Type', 'Aeronave')}: **{av.get('NumberAvailable', 0)}** unid.")
+                    # --- Inventário do Hangar ---
+                    st.caption("Aeronaves em Stock")
+                    avioes_hangar = b_dados.get('AvailableAirframes', [])
+                    if avioes_hangar:
+                        for av in avioes_hangar:
+                            nome_av = av.get('Type', 'Aeronave')
+                            qtd = av.get('NumberAvailable', 0)
+                            st.write(f"- {nome_av}: **{qtd}** unid.")
                     else:
-                        st.write("Sem aeronaves listadas.")
+                        st.write("Sem aeronaves disponíveis nesta base.")
+            else:
+                st.info("Nenhum dado de aeródromo recebido do servidor.")
+
     else:
-        st.info("Aguardando sincronização automática com o servidor...")
+        st.warning("📡 Aguardando sincronização com o servidor do Combat Box para carregar dados de inteligência...")
