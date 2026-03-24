@@ -249,106 +249,112 @@ st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide")
 st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
 
 with st.sidebar:
-    # CSS global da sidebar: reduz padding e tamanho de fonte dos st.metric
+    # Remove padding excessivo do Streamlit na sidebar
     st.markdown("""
         <style>
-        section[data-testid="stSidebar"] { padding-top: 0.5rem !important; }
-        section[data-testid="stSidebar"] h1,
-        section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3 { margin: 0 0 2px 0 !important; font-size: 14px !important; }
+        section[data-testid="stSidebar"] > div { padding-top: 0.8rem !important; }
         section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { margin: 0 !important; }
-        section[data-testid="stSidebar"] hr { margin: 4px 0 !important; }
         </style>
     """, unsafe_allow_html=True)
 
-    # ── BLOCO 1: Status da API (compacto) ──────────────────────────────
+    # ── BLOCO 1 (60s): Status, campanha e meteorologia ─────────────────
     @st.fragment(run_every="60s")
     def painel_telemetria_ativo():
         fetch_combatbox_data()
         fetch_pilots_online()
         _dados = st.session_state.dados_campanha
-        ok = "🟢" if "Sincronizada" in st.session_state.status_cb else "🔴"
+        ok  = "🟢" if "Sincronizada" in st.session_state.status_cb else "🔴"
+        dia_txt, win_txt, rem_txt = "—", "—", "—"
         if _dados:
-            _dia = _dados.get("Day", {})
-            _win = _dados.get('WinningCoalition','—')
-            _rem = _dados.get('DaysRemaining','?')
-            st.markdown(f"""
-                <div style='font-size:11px;color:#888;line-height:1.4;padding:2px 0;'>
-                    {ok} API Sync &nbsp;|&nbsp;
-                    📅 <b>Dia {_dia.get('DayInCampaign','?')}</b>
-                    {_dia.get('Day','?')}/{_dia.get('Month','?')}/{_dia.get('Year','?')}<br>
-                    🏆 {_win} &nbsp;|&nbsp; ⏳ {_rem} dias
-                </div>
-            """, unsafe_allow_html=True)
-        # Meteorologia compacta em tabela HTML (substitui 6x st.metric)
-        v1  = st.session_state.vento_vel_cb
-        d1  = st.session_state.vento_dir_cb
-        t1  = st.session_state.temp_cb
-        v2  = st.session_state.vento_vel_amanha_cb
-        d2  = st.session_state.vento_dir_amanha_cb
-        t2  = st.session_state.temp_amanha_cb
+            _dia    = _dados.get("Day", {})
+            dia_txt = f"Dia {_dia.get('DayInCampaign','?')} &nbsp;·&nbsp; {_dia.get('Day','?')}/{_dia.get('Month','?')}/{_dia.get('Year','?')}"
+            win_txt = _dados.get('WinningCoalition','—')
+            rem_txt = str(_dados.get('DaysRemaining','?'))
+        v1 = st.session_state.vento_vel_cb
+        d1 = st.session_state.vento_dir_cb
+        t1 = st.session_state.temp_cb
+        v2 = st.session_state.vento_vel_amanha_cb
+        d2 = st.session_state.vento_dir_amanha_cb
+        t2 = st.session_state.temp_amanha_cb
+        ts = time.strftime('%H:%M:%S')
+
         st.markdown(f"""
-            <div style='margin-top:4px;'>
-            <table style='width:100%;border-collapse:collapse;font-size:12px;'>
-              <tr>
-                <td style='color:#888;padding:1px 0;width:50%;'>☀️ <b>HOJE</b></td>
-                <td style='color:#888;padding:1px 0;'>🌙 <b>AMANHÃ</b></td>
-              </tr>
-              <tr>
-                <td style='color:#eee;font-size:13px;padding:1px 0;'>
-                  💨 {v1} m/s {d1:.0f}°<br>🌡️ {t1} °C
-                </td>
-                <td style='color:#eee;font-size:13px;padding:1px 0;'>
-                  💨 {v2} m/s {d2:.0f}°<br>🌡️ {t2} °C
-                </td>
-              </tr>
-            </table>
-            <div style='font-size:10px;color:#555;margin-top:2px;'>
-              ⏱️ {time.strftime('%H:%M:%S')}
-            </div>
+            <div style='font-family:sans-serif;font-size:12px;line-height:1.6;'>
+
+              <!-- STATUS -->
+              <div style='color:#666;margin-bottom:6px;'>
+                {ok} API &nbsp;|&nbsp; ⏱ {ts}
+              </div>
+
+              <!-- CAMPANHA -->
+              <div style='background:#161b22;border-radius:6px;padding:7px 10px;margin-bottom:8px;'>
+                <div style='color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:3px;'>📅 CAMPANHA</div>
+                <div style='color:#eee;font-weight:bold;'>{dia_txt}</div>
+                <div style='color:#aaa;font-size:11px;margin-top:2px;'>
+                  🏆 {win_txt} &nbsp;|&nbsp; ⏳ {rem_txt} dias restantes
+                </div>
+              </div>
+
+              <!-- METEOROLOGIA -->
+              <div style='background:#161b22;border-radius:6px;padding:7px 10px;'>
+                <div style='color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:4px;'>🌦️ METEOROLOGIA</div>
+                <div style='display:flex;gap:8px;'>
+                  <div style='flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;'>
+                    <div style='color:#f5a623;font-size:10px;font-weight:bold;margin-bottom:2px;'>☀️ HOJE</div>
+                    <div style='color:#eee;'>💨 {v1} m/s</div>
+                    <div style='color:#eee;'>🧭 {d1:.0f}°</div>
+                    <div style='color:#eee;'>🌡️ {t1} °C</div>
+                  </div>
+                  <div style='flex:1;background:#0d1117;border-radius:5px;padding:5px 8px;'>
+                    <div style='color:#7ec8e3;font-size:10px;font-weight:bold;margin-bottom:2px;'>🌙 AMANHÃ</div>
+                    <div style='color:#eee;'>💨 {v2} m/s</div>
+                    <div style='color:#eee;'>🧭 {d2:.0f}°</div>
+                    <div style='color:#eee;'>🌡️ {t2} °C</div>
+                  </div>
+                </div>
+              </div>
+
             </div>
         """, unsafe_allow_html=True)
 
     painel_telemetria_ativo()
 
-    st.markdown("<hr style='margin:6px 0;'>", unsafe_allow_html=True)
-
-    # ── BLOCO 2: Pilotos + Countdown (1s refresh, topo da sidebar) ────
+    # ── BLOCO 2 (1s): Pilotos + Countdown ─────────────────────────────
     @st.fragment(run_every="1s")
     def sidebar_countdown():
-        # --- PILOTOS ---
         pa = st.session_state.pilots_allied
         px = st.session_state.pilots_axis
+
+        pilots_html = ""
         if pa is not None and px is not None:
             total = max(pa + px, 1)
             pct_a = int(pa / total * 100)
             pct_x = 100 - pct_a
-            st.markdown(f"""
-                <div style='text-align:center;font-size:11px;color:#aaa;
-                            font-weight:bold;letter-spacing:1px;margin-bottom:2px;'>
-                    ✈️ PILOTS ON STATION
+            pilots_html = f"""
+              <!-- PILOTOS -->
+              <div style='background:#161b22;border-radius:6px;padding:7px 10px;margin-top:8px;margin-bottom:8px;'>
+                <div style='color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:5px;'>✈️ PILOTS ON STATION</div>
+                <div style='display:flex;justify-content:space-around;margin-bottom:5px;'>
+                  <div style='text-align:center;'>
+                    <div style='color:#dd4444;font-size:28px;font-weight:900;line-height:1;'>{pa}</div>
+                    <div style='color:#888;font-size:10px;letter-spacing:.5px;'>ALLIES</div>
+                  </div>
+                  <div style='text-align:center;'>
+                    <div style='color:#4488cc;font-size:28px;font-weight:900;line-height:1;'>{px}</div>
+                    <div style='color:#888;font-size:10px;letter-spacing:.5px;'>AXIS</div>
+                  </div>
                 </div>
-                <div style='display:flex;justify-content:space-around;margin-bottom:3px;'>
-                    <div style='text-align:center;'>
-                        <div style='color:#dd4444;font-size:30px;font-weight:900;line-height:1;'>{pa}</div>
-                        <div style='color:#888;font-size:10px;'>ALLIES</div>
-                    </div>
-                    <div style='text-align:center;'>
-                        <div style='color:#4488cc;font-size:30px;font-weight:900;line-height:1;'>{px}</div>
-                        <div style='color:#888;font-size:10px;'>AXIS</div>
-                    </div>
+                <div style='display:flex;height:12px;border-radius:3px;overflow:hidden;'>
+                  <div style='width:{pct_a}%;background:#aa2222;display:flex;align-items:center;
+                              justify-content:center;font-size:9px;font-weight:bold;color:#fff;'>{pct_a}%</div>
+                  <div style='width:{pct_x}%;background:#2255aa;display:flex;align-items:center;
+                              justify-content:center;font-size:9px;font-weight:bold;color:#fff;'>{pct_x}%</div>
                 </div>
-                <div style='display:flex;height:14px;border-radius:3px;overflow:hidden;'>
-                    <div style='width:{pct_a}%;background:#cc3333;display:flex;align-items:center;
-                                justify-content:center;font-size:10px;font-weight:bold;color:#fff;'>{pct_a}%</div>
-                    <div style='width:{pct_x}%;background:#3366bb;display:flex;align-items:center;
-                                justify-content:center;font-size:10px;font-weight:bold;color:#fff;'>{pct_x}%</div>
-                </div>
-                <div style='text-align:center;font-size:9px;color:#555;margin-bottom:4px;'>COALITION BALANCE</div>
-                <hr style='margin:4px 0;border-color:#333;'>
-            """, unsafe_allow_html=True)
+                <div style='text-align:center;font-size:9px;color:#555;margin-top:2px;'>COALITION BALANCE</div>
+              </div>
+            """
 
-        # --- COUNTDOWN ---
+        countdown_html = ""
         end_str = st.session_state.mission_end_time
         if end_str:
             try:
@@ -362,22 +368,26 @@ with st.sidebar:
                     mm  = int((restante % 3600) // 60)
                     ss  = int(restante % 60)
                     cor = "#ffcc00" if restante > 1800 else ("#ff8800" if restante > 600 else "#ff3333")
-                    st.markdown(f"""
-                        <div style='text-align:center;font-size:10px;color:#aaa;
-                                    font-weight:bold;letter-spacing:1px;margin-bottom:2px;'>
-                            ⏰ MISSION COUNTDOWN
+                    countdown_html = f"""
+                      <!-- COUNTDOWN -->
+                      <div style='background:#0d1117;border:1px solid #333;border-radius:6px;padding:8px 6px;text-align:center;'>
+                        <div style='color:#aaa;font-size:10px;letter-spacing:1.5px;font-weight:bold;margin-bottom:4px;'>
+                          ⏰ MISSION COUNTDOWN
                         </div>
-                        <div style='text-align:center;font-size:32px;font-weight:900;
-                                    font-family:monospace;color:{cor};
-                                    background:#111;border-radius:6px;padding:4px 2px;
-                                    border:1px solid #333;letter-spacing:2px;'>
-                            {hh:02d}:{mm:02d}:{ss:02d}
+                        <div style='font-size:34px;font-weight:900;font-family:monospace;
+                                    color:{cor};letter-spacing:2px;line-height:1.1;'>
+                          {hh:02d}:{mm:02d}:{ss:02d}
                         </div>
-                    """, unsafe_allow_html=True)
+                      </div>
+                    """
                 else:
-                    st.error("🔄 Servidor a reiniciar...")
+                    countdown_html = "<div style='color:#ff4444;text-align:center;padding:8px;'>🔄 Servidor a reiniciar...</div>"
             except Exception:
                 pass
+
+        if pilots_html or countdown_html:
+            st.markdown(f"<div style='font-family:sans-serif;'>{pilots_html}{countdown_html}</div>",
+                        unsafe_allow_html=True)
 
     sidebar_countdown()
 
@@ -998,36 +1008,48 @@ with tab6:
         "rhineland-campaign/rhineland-campaign-mission-planner-latest.json.aspx"
     )
 
-    # Botão discreto no topo
+    # Botão discreto para abrir em nova aba
     st.markdown(f"""
-        <div style="margin-bottom:4px;">
+        <div style="margin-bottom:6px;">
             <a href="{MAP_URL}" target="_blank"
-               style="display:inline-block; padding:4px 12px; background:#1a3a1a;
-                      border:1px solid #2a6a2a; border-radius:5px; color:#88ff88;
-                      text-decoration:none; font-size:12px;">
+               style="display:inline-block;padding:4px 12px;background:#1a3a1a;
+                      border:1px solid #2a6a2a;border-radius:5px;color:#88ff88;
+                      text-decoration:none;font-size:12px;">
                 🔗 Abrir em nova aba
             </a>
-            <span style="margin-left:10px; font-size:11px; color:#555;">
+            <span style="margin-left:10px;font-size:11px;color:#555;">
                 Linha de frente ao vivo · Bases · Objetivos
             </span>
         </div>
     """, unsafe_allow_html=True)
 
-    # iframe: largura máxima com margem negativa, altura = viewport menos header/tabs/botão (~115px)
+    # O iframe usa position:fixed para ocupar toda a área disponível
+    # sem sofrer clip do container do Streamlit (que causa o bug de zoom).
+    # left = largura da sidebar (~16rem) + margem (~1rem)
+    # O height subtrai a altura do header do Streamlit (~3rem) + tabs + botão
     st.markdown(f"""
         <style>
-        .iframe-map-wrapper {{
-            margin-left:  -4rem;
-            margin-right: -4rem;
-            margin-bottom: -3rem;
-        }}
+        /* Esconde a scrollbar da página principal quando estamos no mapa */
+        body {{ overflow: hidden !important; }}
         </style>
-        <div class="iframe-map-wrapper">
-            <iframe
-                src="{MAP_URL}"
-                style="display:block; border:none; width:100%;
-                       height: calc(100vh - 115px);"
-                allow="fullscreen"
-            ></iframe>
-        </div>
+
+        <!-- Placeholder que ocupa a altura do iframe para o Streamlit não colapsar -->
+        <div style="height: calc(100vh - 9rem); width: 100%;"></div>
+
+        <!-- iframe fixado: começa após a sidebar, vai até a borda direita e inferior -->
+        <iframe
+            src="{MAP_URL}"
+            style="
+                position: fixed;
+                top:    9.5rem;
+                left:   17rem;
+                right:  0;
+                bottom: 0;
+                width:  calc(100vw - 17rem);
+                height: calc(100vh - 9.5rem);
+                border: none;
+                z-index: 100;
+            "
+            allow="fullscreen"
+        ></iframe>
     """, unsafe_allow_html=True)
