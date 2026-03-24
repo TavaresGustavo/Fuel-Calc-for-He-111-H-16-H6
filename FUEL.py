@@ -55,21 +55,26 @@ def fetch_combatbox_data():
         dados_json = response.json()
         st.session_state.dados_campanha = dados_json 
         
+        # --- AJUSTE DE CONVENÇÃO: HOJE ---
         weather_hoje = dados_json.get("Weather", {})
         wind_hoje = weather_hoje.get("WindAtGroundLevel", {})
         st.session_state.temp_cb = float(weather_hoje.get("Temperature", 15.0))
         st.session_state.vento_vel_cb = float(wind_hoje.get("Speed", 5.0))
-        st.session_state.vento_dir_cb = float(wind_hoje.get("Bearing", 45.0))
-        st.session_state.nuvens_hoje_cb = weather_hoje.get("CloudDescription", "N/D")
+        
+        # Inversão de 180 graus para converter "Para Onde" em "De Onde"
+        bearing_bruto = float(wind_hoje.get("Bearing", 45.0))
+        st.session_state.vento_dir_cb = (bearing_bruto + 180) % 360
 
+        # --- AJUSTE DE CONVENÇÃO: AMANHÃ ---
         weather_amanha = dados_json.get("WeatherTomorrow", {})
         wind_amanha = weather_amanha.get("WindAtGroundLevel", {})
         st.session_state.temp_amanha_cb = float(weather_amanha.get("Temperature", 15.0))
         st.session_state.vento_vel_amanha_cb = float(wind_amanha.get("Speed", 5.0))
-        st.session_state.vento_dir_amanha_cb = float(wind_amanha.get("Bearing", 45.0))
-        st.session_state.nuvens_amanha_cb = weather_amanha.get("CloudDescription", "N/D")
         
-        st.session_state.status_cb = "✅ API Sincronizada! Telemetria AO VIVO."
+        bearing_amanha_bruto = float(wind_amanha.get("Bearing", 45.0))
+        st.session_state.vento_dir_amanha_cb = (bearing_amanha_bruto + 180) % 360
+        
+        st.session_state.status_cb = "✅ API Sincronizada! (Correção de 180° Ativa)"
             
     except Exception as e:
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
