@@ -334,98 +334,78 @@ with tab1:
         st.caption(f"Capacidade Máxima: {av['tanque_max_l']} L")
         
 # ==========================================
-# ABA 2: MIRA DE BOMBARDEIO (PADRÃO SPIFF)
+# ABA 2: MIRA & VENTO (TOUCH OPTIMIZED)
 # ==========================================
 with tab2:
-    st.header("🎯 Bombsight Calculator (Lofte 7)")
+    # --- CSS PARA DEIXAR OS SLIDERS "GORDOS" (FACILITAR O TOUCH) ---
+    st.markdown("""
+        <style>
+            .stSlider [data-baseweb="slider"] {
+                height: 40px; /* Aumenta a área de toque da barra */
+            }
+            .stSlider [data-baseweb="thumb"] {
+                height: 35px; /* Aumenta o "botão" de arrastar */
+                width: 35px;
+                background-color: #FF4B4B;
+            }
+            .stSlider [data-testid="stTickBar"] {
+                display: none; /* Limpa o visual para focar no seletor */
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.header("🎯 Calculadora de Vento e Deriva")
+    st.caption("Ajuste os valores deslizando os seletores abaixo.")
+
+    # --- INPUTS DE 3 FATORES (TOUCH READY) ---
     
-    # --- INPUTS (Lado a Lado como na Original) ---
-    c1, c2 = st.columns(2)
+    # 1. Plane Heading (Rumo da Aeronave)
+    plane_hdg = st.slider("🧭 PLANE HEADING (TH °)", 0, 360, 0, step=1)
     
-    with c1:
-        st.markdown("### ✈️ Flight Data")
-        # Puxa dados do st.session_state se existirem, senão usa padrão
-        alt_m = st.number_input("Altitude de Voo (m)", value=4000, step=100)
-        elev_m = st.number_input("Elevação do Alvo (m)", value=0, step=10)
-        ias_kmh = st.number_input("Velocidade Indicada - IAS (km/h)", value=300, step=5)
-        
-    with c2:
-        st.markdown("### 🌬️ Wind & Course")
-        tc_deg = st.number_input("Rumo da Aeronave - TC (°)", value=0, min_value=0, max_value=360)
-        w_dir_from = st.number_input("Vento vindo DE (°)", value=0, min_value=0, max_value=360)
-        w_spd_ms = st.number_input("Velocidade do Vento (m/s)", value=0.0, step=0.5)
+    # 2. Wind Heading (De onde vem o vento)
+    wind_hdg = st.slider("🌬️ WIND HEADING (FROM °)", 0, 360, 0, step=1)
+    
+    # 3. Wind Speed (Velocidade do vento)
+    wind_spd = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.5)
 
     # --- MOTOR DE CÁLCULO (LÓGICA SPIFF) ---
-    # 1. Constantes Físicas
-    g = 9.80665
-    h_rel = alt_m - elev_m
+    # Precisamos da TAS da sessão para o cálculo de deriva ser preciso
+    tas_ms = (st.session_state.get('vel_calc', 300)) / 3.6 
     
-    # 2. Cálculo da TAS (Correção Atmosférica IL-2)
-    # A regra padrão do IL-2 é aprox. 1.6% de ganho por 1000m
-    tas_kmh = ias_kmh * (1 + (0.016 * (alt_m / 1000)))
-    tas_ms = tas_kmh / 3.6
+    # Ângulo do vento em relação ao avião (Wind Angle)
+    wa_rad = math.radians(wind_hdg - plane_hdg)
     
-    # 3. Triângulo de Vento
-    # Ângulo entre o rumo e a origem do vento
-    angle_wind_rad = math.radians(w_dir_from - tc_deg)
-    
-    # Componentes do Vento
-    w_cross = w_spd_ms * math.sin(angle_wind_rad)
-    w_head = w_spd_ms * math.cos(angle_wind_rad)
-    
-    # Ground Speed (GS) e Wind Correction Angle (WCA)
-    # GS = sqrt(TAS² - V_cross²) - V_head
+    # Cálculo da Deriva (WCA)
+    # sin(wca) = (Vwind * sin(wa)) / Vtas
     try:
-        wca_rad = math.asin(w_cross / tas_ms)
+        sin_wca = (wind_spd * math.sin(wa_rad)) / tas_ms
+        wca_rad = math.asin(max(-1.0, min(1.0, sin_wca)))
         wca_deg = math.degrees(wca_rad)
-        gs_ms = (tas_ms * math.cos(wca_rad)) - w_head
+        
+        # Cálculo da Ground Speed (GS)
+        # GS = Vtas * cos(wca) - Vwind * cos(wa)
+        gs_ms = (tas_ms * math.cos(wca_rad)) - (wind_spd * math.cos(wa_rad))
         gs_kmh = gs_ms * 3.6
     except:
         wca_deg = 0.0
-        gs_kmh = tas_kmh
+        gs_kmh = tas_ms * 3.6
 
-    # 4. Balística de Queda (Lofte 7)
-    if h_rel > 0:
-        # Tempo de queda no vácuo
-        t_fall = math.sqrt((2 * h_rel) / g)
-        
-        # Cálculo de Trail (Arrasto da Bomba)
-        # O Spiff usa uma simplificação onde o Trail cresce com a TAS e Altitude
-        # Fórmula aproximada: Trail_Dist = (TAS_ms * 0.05) * (h_rel / 1000)
-        trail_dist = (tas_ms * 0.05) * (h_rel / 1000)
-        
-        # Distância de Avanço Real (D)
-        dist_forward = (gs_ms * t_fall) - trail_dist
-        
-        # Ângulo Final da Mira (Alpha)
-        # tan(alpha) = dist_forward / h_rel
-        angle_rad = math.atan(dist_forward / h_rel)
-        angle_deg = math.degrees(angle_rad)
-        
-        # --- OUTPUTS (Display Final) ---
-        st.divider()
-        res1, res2, res3 = st.columns(3)
-        
-        with res1:
-            st.metric("TAS (Vel. Real)", f"{tas_kmh:.0f} km/h")
-            st.metric("GS (Vel. Solo)", f"{gs_kmh:.0f} km/h")
-            
-        with res2:
-            st.metric("TEMPO DE QUEDA", f"{t_fall:.1f} s")
-            st.metric("DERIVA (DRIFT)", f"{wca_deg:.1f}°")
-            
-        with res3:
-            st.subheader("⚙️ AJUSTE MIRA")
-            st.markdown(f"# {angle_deg:.1f}°")
-            st.caption("Insira este valor no Lofte 7")
+    # --- DISPLAY DE RESULTADOS (ESTILO DASHBOARD) ---
+    st.divider()
+    res_c1, res_c2 = st.columns(2)
+    
+    with res_c1:
+        st.metric("DERIVA (WCA)", f"{wca_deg:+.1f}°")
+        st.caption("Ajuste lateral na mira")
 
-        # Representação Visual da Deriva
-        if abs(wca_deg) > 0.5:
-            direcao = "DIREITA" if wca_deg > 0 else "ESQUERDA"
-            st.warning(f"Ajuste o desvio lateral da mira: {abs(wca_deg):.1f}° para a {direcao}")
-            
-    else:
-        st.error("Altitude insuficiente para o cálculo.")
+    with res_c2:
+        st.metric("VEL. SOLO (GS)", f"{gs_kmh:.0f} km/h")
+        st.caption("Velocidade real sobre o alvo")
+
+    # Feedback Visual de Correção
+    if abs(wca_deg) > 0.1:
+        lado = "DIREITA" if wca_deg > 0 else "ESQUERDA"
+        st.warning(f"✈️ Compensar {abs(wca_deg):.1f}° para a {lado}")
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
