@@ -249,101 +249,132 @@ st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide")
 st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("📡 Comando e Controlo")
-    st.markdown("Telemetria em tempo real (Atualiza a cada 60s).")
-    
+    # CSS global da sidebar: reduz padding e tamanho de fonte dos st.metric
+    st.markdown("""
+        <style>
+        section[data-testid="stSidebar"] { padding-top: 0.5rem !important; }
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3 { margin: 0 0 2px 0 !important; font-size: 14px !important; }
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { margin: 0 !important; }
+        section[data-testid="stSidebar"] hr { margin: 4px 0 !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # ── BLOCO 1: Status da API (compacto) ──────────────────────────────
     @st.fragment(run_every="60s")
     def painel_telemetria_ativo():
         fetch_combatbox_data()
         fetch_pilots_online()
-        st.info(st.session_state.status_cb)
-        st.divider()
-        # Dados da campanha
         _dados = st.session_state.dados_campanha
+        ok = "🟢" if "Sincronizada" in st.session_state.status_cb else "🔴"
         if _dados:
             _dia = _dados.get("Day", {})
-            st.markdown(f"**📅 Dia {_dia.get('DayInCampaign','?')}** — {_dia.get('Day','?')}/{_dia.get('Month','?')}/{_dia.get('Year','?')}")
-            st.markdown(f"**🏆** {_dados.get('WinningCoalition','—')} | **⏳** {_dados.get('DaysRemaining','?')} dias restantes")
-            st.divider()
-        st.markdown("**☀️ METEOROLOGIA: HOJE**")
-        st.metric("Vento", f"{st.session_state.vento_vel_cb} m/s")
-        st.metric("Direção", f"{st.session_state.vento_dir_cb:.0f}°")
-        st.metric("Temperatura", f"{st.session_state.temp_cb} °C")
-        st.divider()
-        st.markdown("**🌙 METEOROLOGIA: AMANHÃ**")
-        st.metric("Vento", f"{st.session_state.vento_vel_amanha_cb} m/s")
-        st.metric("Direção", f"{st.session_state.vento_dir_amanha_cb:.0f}°")
-        st.metric("Temperatura", f"{st.session_state.temp_amanha_cb} °C")
-        st.caption(f"⏱️ Última sincronização: {time.strftime('%H:%M:%S')}")
-        
+            _win = _dados.get('WinningCoalition','—')
+            _rem = _dados.get('DaysRemaining','?')
+            st.markdown(f"""
+                <div style='font-size:11px;color:#888;line-height:1.4;padding:2px 0;'>
+                    {ok} API Sync &nbsp;|&nbsp;
+                    📅 <b>Dia {_dia.get('DayInCampaign','?')}</b>
+                    {_dia.get('Day','?')}/{_dia.get('Month','?')}/{_dia.get('Year','?')}<br>
+                    🏆 {_win} &nbsp;|&nbsp; ⏳ {_rem} dias
+                </div>
+            """, unsafe_allow_html=True)
+        # Meteorologia compacta em tabela HTML (substitui 6x st.metric)
+        v1  = st.session_state.vento_vel_cb
+        d1  = st.session_state.vento_dir_cb
+        t1  = st.session_state.temp_cb
+        v2  = st.session_state.vento_vel_amanha_cb
+        d2  = st.session_state.vento_dir_amanha_cb
+        t2  = st.session_state.temp_amanha_cb
+        st.markdown(f"""
+            <div style='margin-top:4px;'>
+            <table style='width:100%;border-collapse:collapse;font-size:12px;'>
+              <tr>
+                <td style='color:#888;padding:1px 0;width:50%;'>☀️ <b>HOJE</b></td>
+                <td style='color:#888;padding:1px 0;'>🌙 <b>AMANHÃ</b></td>
+              </tr>
+              <tr>
+                <td style='color:#eee;font-size:13px;padding:1px 0;'>
+                  💨 {v1} m/s {d1:.0f}°<br>🌡️ {t1} °C
+                </td>
+                <td style='color:#eee;font-size:13px;padding:1px 0;'>
+                  💨 {v2} m/s {d2:.0f}°<br>🌡️ {t2} °C
+                </td>
+              </tr>
+            </table>
+            <div style='font-size:10px;color:#555;margin-top:2px;'>
+              ⏱️ {time.strftime('%H:%M:%S')}
+            </div>
+            </div>
+        """, unsafe_allow_html=True)
+
     painel_telemetria_ativo()
 
-    # ── COUNTDOWN — atualiza a cada segundo ──────────────────────────
+    st.markdown("<hr style='margin:6px 0;'>", unsafe_allow_html=True)
+
+    # ── BLOCO 2: Pilotos + Countdown (1s refresh, topo da sidebar) ────
     @st.fragment(run_every="1s")
     def sidebar_countdown():
-        dados = st.session_state.dados_campanha
-
-        # --- PILOTOS NA ESTAÇÃO ---
+        # --- PILOTOS ---
         pa = st.session_state.pilots_allied
         px = st.session_state.pilots_axis
         if pa is not None and px is not None:
             total = max(pa + px, 1)
-            pct_a = pa / total
-            pct_x = px / total
-            st.markdown("**✈️ PILOTOS NO SERVER**")
-            c_a, c_x = st.columns(2)
-            with c_a:
-                st.markdown(f"<div style='text-align:center;color:#cc4444;font-size:28px;font-weight:900'>{pa}</div>"
-                            f"<div style='text-align:center;font-size:11px;color:#aaa'>ALLIES</div>",
-                            unsafe_allow_html=True)
-            with c_x:
-                st.markdown(f"<div style='text-align:center;color:#4488cc;font-size:28px;font-weight:900'>{px}</div>"
-                            f"<div style='text-align:center;font-size:11px;color:#aaa'>AXIS</div>",
-                            unsafe_allow_html=True)
-            # Barra de balanço
+            pct_a = int(pa / total * 100)
+            pct_x = 100 - pct_a
             st.markdown(f"""
-                <div style='display:flex;height:18px;border-radius:4px;overflow:hidden;margin:4px 0 8px 0;'>
-                    <div style='width:{pct_a*100:.0f}%;background:#cc3333;display:flex;align-items:center;
-                                justify-content:center;font-size:11px;font-weight:bold;color:#fff;'>
-                        {pct_a*100:.0f}%
+                <div style='text-align:center;font-size:11px;color:#aaa;
+                            font-weight:bold;letter-spacing:1px;margin-bottom:2px;'>
+                    ✈️ PILOTS ON STATION
+                </div>
+                <div style='display:flex;justify-content:space-around;margin-bottom:3px;'>
+                    <div style='text-align:center;'>
+                        <div style='color:#dd4444;font-size:30px;font-weight:900;line-height:1;'>{pa}</div>
+                        <div style='color:#888;font-size:10px;'>ALLIES</div>
                     </div>
-                    <div style='width:{pct_x*100:.0f}%;background:#3366bb;display:flex;align-items:center;
-                                justify-content:center;font-size:11px;font-weight:bold;color:#fff;'>
-                        {pct_x*100:.0f}%
+                    <div style='text-align:center;'>
+                        <div style='color:#4488cc;font-size:30px;font-weight:900;line-height:1;'>{px}</div>
+                        <div style='color:#888;font-size:10px;'>AXIS</div>
                     </div>
                 </div>
-                <div style='text-align:center;font-size:10px;color:#666;margin-bottom:8px;'>COALITION BALANCE</div>
+                <div style='display:flex;height:14px;border-radius:3px;overflow:hidden;'>
+                    <div style='width:{pct_a}%;background:#cc3333;display:flex;align-items:center;
+                                justify-content:center;font-size:10px;font-weight:bold;color:#fff;'>{pct_a}%</div>
+                    <div style='width:{pct_x}%;background:#3366bb;display:flex;align-items:center;
+                                justify-content:center;font-size:10px;font-weight:bold;color:#fff;'>{pct_x}%</div>
+                </div>
+                <div style='text-align:center;font-size:9px;color:#555;margin-bottom:4px;'>COALITION BALANCE</div>
+                <hr style='margin:4px 0;border-color:#333;'>
             """, unsafe_allow_html=True)
-            st.divider()
 
-        # --- MISSION COUNTDOWN ---
+        # --- COUNTDOWN ---
         end_str = st.session_state.mission_end_time
         if end_str:
             try:
                 from datetime import datetime, timezone
                 import re as _re
-                # Formato real da API: "2026-03-23T23:00:00.3452913Z"
-                # Trunca microssegundos para 6 dígitos (Python max) e remove Z
                 end_clean = _re.sub(r'(\.\d{6})\d*Z?$', r'\1', end_str.rstrip('Z'))
-                end_dt = datetime.strptime(end_clean, "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=timezone.utc)
-                now_utc  = datetime.now(timezone.utc)
-                restante = (end_dt - now_utc).total_seconds()
+                end_dt    = datetime.strptime(end_clean, "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=timezone.utc)
+                restante  = (end_dt - datetime.now(timezone.utc)).total_seconds()
                 if restante > 0:
-                    hh = int(restante // 3600)
-                    mm = int((restante % 3600) // 60)
-                    ss = int(restante % 60)
+                    hh  = int(restante // 3600)
+                    mm  = int((restante % 3600) // 60)
+                    ss  = int(restante % 60)
                     cor = "#ffcc00" if restante > 1800 else ("#ff8800" if restante > 600 else "#ff3333")
-                    st.markdown("**⏰ MISSION COUNTDOWN**")
                     st.markdown(f"""
-                        <div style='text-align:center;font-size:38px;font-weight:900;
+                        <div style='text-align:center;font-size:10px;color:#aaa;
+                                    font-weight:bold;letter-spacing:1px;margin-bottom:2px;'>
+                            ⏰ MISSION COUNTDOWN
+                        </div>
+                        <div style='text-align:center;font-size:32px;font-weight:900;
                                     font-family:monospace;color:{cor};
-                                    background:#111;border-radius:8px;padding:8px 4px;
-                                    border:1px solid #333;letter-spacing:3px;margin-bottom:4px;'>
+                                    background:#111;border-radius:6px;padding:4px 2px;
+                                    border:1px solid #333;letter-spacing:2px;'>
                             {hh:02d}:{mm:02d}:{ss:02d}
                         </div>
                     """, unsafe_allow_html=True)
                 else:
-                    st.markdown("**⏰ MISSION COUNTDOWN**")
                     st.error("🔄 Servidor a reiniciar...")
             except Exception:
                 pass
@@ -967,61 +998,35 @@ with tab6:
         "rhineland-campaign/rhineland-campaign-mission-planner-latest.json.aspx"
     )
 
-    # CSS: remove todo padding/margin da área de conteúdo quando estiver na aba do mapa
-    st.markdown("""
-        <style>
-        /* Remove padding lateral da área principal apenas quando o mapa está ativo */
-        section[data-testid="stMain"] > div:first-child {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            padding-top: 0 !important;
-        }
-        /* Container do iframe sem margens */
-        .map-full-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 9999;
-            background: #0e1117;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # Botão flutuante para abrir em nova aba
+    # Botão discreto no topo
     st.markdown(f"""
-        <div style="position:relative; margin-bottom:6px;">
+        <div style="margin-bottom:4px;">
             <a href="{MAP_URL}" target="_blank"
-               style="display:inline-block; padding:6px 14px; background:#1a3a1a;
-                      border:1px solid #2a6a2a; border-radius:6px; color:#88ff88;
-                      text-decoration:none; font-size:13px;">
+               style="display:inline-block; padding:4px 12px; background:#1a3a1a;
+                      border:1px solid #2a6a2a; border-radius:5px; color:#88ff88;
+                      text-decoration:none; font-size:12px;">
                 🔗 Abrir em nova aba
             </a>
-            <span style="margin-left:12px; font-size:12px; color:#555;">
+            <span style="margin-left:10px; font-size:11px; color:#555;">
                 Linha de frente ao vivo · Bases · Objetivos
             </span>
         </div>
     """, unsafe_allow_html=True)
 
-    # iframe maximizado — usa negative margin para encostar na sidebar e borda direita
-    # height calculado para Full HD vertical (1920px) menos header/tabs (~110px)
+    # iframe: largura máxima com margem negativa, altura = viewport menos header/tabs/botão (~115px)
     st.markdown(f"""
         <style>
         .iframe-map-wrapper {{
             margin-left:  -4rem;
             margin-right: -4rem;
-            margin-bottom: -4rem;
+            margin-bottom: -3rem;
         }}
         </style>
         <div class="iframe-map-wrapper">
             <iframe
                 src="{MAP_URL}"
-                width="100%"
-                height="1780"
-                style="display:block; border:none;"
+                style="display:block; border:none; width:100%;
+                       height: calc(100vh - 115px);"
                 allow="fullscreen"
             ></iframe>
         </div>
