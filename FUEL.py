@@ -138,107 +138,80 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 Nav
 with tab1:
     st.header("🛠️ Configuração de Carga e Rota")
     
-    # --- Secção de Importação e Gestão de Ficheiros ---
+    # --- Seção de Importação ---
     col_f, col_clear = st.columns([3, 1])
     with col_f: 
-        arquivo_plano = st.file_uploader("📥 Importar Rota (.json)", type=["json"], help="Suporta ficheiros do Mission Planner ou exportações nativas.")
+        arquivo_plano = st.file_uploader("📥 Importar Rota (.json)", type=["json"])
         
         if arquivo_plano is not None:
             file_content = arquivo_plano.getvalue()
             current_hash = hash(file_content)
             
-            # Evita recarregar se o ficheiro for o mesmo
-            if st.session_state.last_file_hash != current_hash:
+            if st.session_state.get('last_file_hash') != current_hash:
                 st.session_state.last_file_hash = current_hash
                 try:
                     dados_plano = json.loads(file_content)
-                    
-                    # Lógica de deteção de formato
-                    if "routes" in dados_plano: # Formato Mission Planner
+                    if "routes" in dados_plano: 
                         rota = dados_plano["routes"][0]
                         coords = rota["latLngs"]
                         navlog_temp = []
                         dist_total = 0.0
-                        
                         for i in range(len(coords)-1):
-                            dx = coords[i+1]['lng'] - coords[i]['lng']
-                            dy = coords[i+1]['lat'] - coords[i]['lat']
-                            # Fator de conversão aproximado para km no mapa do IL-2
+                            dx, dy = coords[i+1]['lng'] - coords[i]['lng'], coords[i+1]['lat'] - coords[i]['lat']
                             d_perna = math.hypot(dx, dy) * 3.0 
                             dist_total += d_perna
                             tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
-                            navlog_temp.append({
-                                "Perna": f"WP{i} ➔ WP{i+1}", 
-                                "Distância (km)": round(d_perna, 1), 
-                                "Rumo (TC)": round(tc_deg, 0)
-                            })
+                            navlog_temp.append({"Perna": f"WP{i}➔WP{i+1}", "Distância (km)": round(d_perna, 1), "Rumo (TC)": round(tc_deg, 0)})
                         st.session_state.navlog_manual = navlog_temp
                         st.session_state.dist_calc = dist_total
-                        st.session_state.vel_calc = float(rota.get("speed", 320.0))
-                    else: # Formato Nativo (Lista de dicionários)
+                    else: 
                         st.session_state.navlog_manual = dados_plano
                         st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
-                    
-                    st.success("✅ Rota tática importada e processada!")
-                except Exception as e:
-                    st.error(f"Erro ao processar JSON: {e}")
+                    st.success("✅ Rota carregada com sucesso!")
+                except: st.error("Erro ao processar o arquivo JSON.")
             
     with col_clear:
-        if st.button("🗑️ Limpar Rota", use_container_width=True): 
+        if st.button("🗑️ Reset Rota", use_container_width=True): 
             st.session_state.navlog_manual = []
-            st.session_state.index_perna_ativa = 0
             st.session_state.dist_calc = 100.0
             st.rerun()
 
     st.divider()
     
-    # --- Configuração da Aeronave e Performance ---
+    # --- Seleção de Avião e Pesos (Chaves Atualizadas) ---
     c1, c2 = st.columns(2)
     with c1:
         av_nome = st.selectbox("Selecione a Aeronave", list(db_avioes.keys()))
         av = db_avioes[av_nome]
         
-        # Inputs de missão (preenchidos automaticamente se houver importação)
-        missao_dist = st.number_input("Distância da Missão (km)", value=float(st.session_state.dist_calc), min_value=1.0)
-        missao_vel = st.number_input("Velocidade de Cruzeiro (km/h)", value=float(av['vel']))
-        margem_seguranca = st.slider("Margem de Reserva de Combustível (%)", 0, 100, 30)
+        # Uso das chaves longas conforme sua base de dados
+        missao_dist = st.number_input("Distância da Missão (km)", value=float(st.session_state.get('dist_calc', 100.0)))
+        missao_vel = st.number_input("Velocidade de Cruzeiro (km/h)", value=float(av['vel_cruzeiro_padrao']))
+        margem_seg = st.slider("Reserva de Combustível (%)", 0, 100, 30)
     
     with c2:
-        mod_escolhida = st.selectbox("Modificações (Field Mods)", list(av['mods'].keys()))
-        bomba_escolhida = st.selectbox("Configuração de Bombas", list(av['bombas'].keys()))
+        mod_sel = st.selectbox("Modificações", list(av['modificacoes'].keys()))
+        bomb_sel = st.selectbox("Carga de Bombas", list(av['presets_bombas'].keys()))
+        st.caption(f"🛡️ Armamento Fixo: {av['armamento_fixed'] if 'armamento_fixed' in av else av['armamento_fixo']}")
         
     # --- Cálculos Logísticos ---
-    # Tempo estimado em minutos
-    tempo_estimado_min = (missao_dist / missao_vel) * 60
-    # Combustível: Tempo * Consumo/Min * (1 + Margem)
-    combustivel_l = tempo_estimado_min * av['cons'] * (1 + (margem_seguranca / 100))
-    # Peso do combustível (Densidade padrão 0.72 kg/l)
-    peso_comb = combustivel_l * 0.72
-    
-    # Peso Final = Base + Mods + Bombas + Combustível
-    peso_final_decolagem = av['base_weight'] if 'base_weight' in av else av['peso_base']
-    peso_final_decolagem += av['mods'][mod_escolhida] + av['bombas'][bomba_escolhida] + peso_comb
+    tempo_estimado = (missao_dist / missao_vel) * 60
+    # Chave consumo_l_min
+    comb_l = tempo_estimado * av['consumo_l_min'] * (1 + (margem_seg / 100))
+    # Chave peso_base_sem_combustivel
+    peso_total = av['peso_base_sem_combustivel'] + av['modificacoes'][mod_sel] + av['presets_bombas'][bomb_sel] + (comb_l * 0.72)
     
     st.divider()
-    
-    # --- Painel de Resultados ---
-    res_col1, res_col2 = st.columns(2)
-    
-    with res_col1:
-        if peso_final_decolagem <= av['peso_max']:
-            st.success(f"⚖️ **Peso de Decolagem:** {peso_final_decolagem:.0f} kg")
-            st.caption(f"Limite Máximo: {av['peso_max']} kg")
+    col_res1, col_res2 = st.columns(2)
+    with col_res1:
+        if peso_total <= av['peso_max']:
+            st.success(f"⚖️ Peso Total: **{peso_total:.0f} kg** / {av['peso_max']} kg")
         else:
-            st.error(f"⚠️ **SOBRECARGA DETETADA:** {peso_final_decolagem:.0f} kg")
-            st.caption(f"Excede o limite em {peso_final_decolagem - av['peso_max']:.0f} kg")
-
-    with res_col2:
-        st.info(f"⛽ **Abastecimento:** {combustivel_l:.0f} Litros")
-        st.caption(f"Estimativa para {tempo_estimado_min:.0f} min de voo com reserva.")
-
-    st.divider()
-    st.markdown(f"**Resumo Técnico:** {av_nome} com {mod_escolhida} e {bomba_escolhida}.")
-
+            st.error(f"⚠️ SOBRECARGA: **{peso_total:.0f} kg** / {av['peso_max']} kg")
+    with col_res2:
+        st.info(f"⛽ Combustível: **{comb_l:.0f} Litros**")
+        st.caption(f"Capacidade Máxima: {av['tanque_max_l']} L")
+        
 # ==========================================
 # ABA 2: LOTFE 7
 # ==========================================
