@@ -85,46 +85,17 @@ def fetch_combatbox_data():
 
 
 # ==========================================
-# 2. BASE DE DADOS: Aeronaves e Mapas
+# 2.1 BASE DE DADOS DEFINITIVA (ALTITUDES)
 # ==========================================
 db_altitudes_tecnico = {
-    # Captura 1
-    "Aachen": 190,
-    "Achmer": 54,
-    "Bad Lippspringe": 140,
-    # Captura 2
-    "Breitscheid": 558,
-    "Chievres": 59,
-    "Coesfeld-Lette": 80,
-    "Deelen": 48,
-    "Deurne": 12,
-    "Diest (B-64)": 27,
-    "Dortmund": 129,
-    # Captura 3
-    "Eudenbach": 360,
-    "Florennes": 285,
-    "Gilze-Rijen": 15,
-    "Greven": 48,
-    "Guetersloh": 80,
-    "Kirchhellen": 67,
-    "Liege (A-93)": 201,
-    # Captura 4
-    "Limburg": 31,
-    "Melsbroek": 56,
-    "Nivelles (B-75)": 103,
-    "Petit Brogel": 61,
-    "Plantluenne": 35,
-    "Quackenbrueck": 24,
-    "Schiphol": 0,  # Real é -3m, mas usamos 0 para evitar erros de cálculo
-    "Sint-Denijs-Westrem": 8,
-    # Captura 5
-    "Soesterberg": 20,
-    "Stoermede": 90,
-    "Strassfeld": 161,
-    "Twente": 35,
-    "Venlo": 30,
-    "Volkel": 14,
-    "Woensdrecht": 19
+    "Aachen": 190, "Achmer": 54, "Bad Lippspringe": 140, "Breitscheid": 558,
+    "Chievres": 59, "Coesfeld-Lette": 80, "Deelen": 48, "Deurne": 12,
+    "Diest": 27, "Dortmund": 129, "Eudenbach": 360, "Florennes": 285,
+    "Gilze-Rijen": 15, "Greven": 48, "Guetersloh": 80, "Kirchhellen": 67,
+    "Liege": 201, "Limburg": 31, "Melsbroek": 56, "Nivelles": 103,
+    "Petit Brogel": 61, "Plantluenne": 35, "Quackenbrueck": 24, "Schiphol": 0,
+    "Sint-Denijs-Westrem": 8, "Soesterberg": 20, "Stoermede": 90,
+    "Strassfeld": 161, "Twente": 35, "Venlo": 30, "Volkel": 14, "Woensdrecht": 19
 }
 
 # ==========================================
@@ -451,51 +422,44 @@ with tab3:
 
 
 # ==========================================
-# ABA 4: FMC (ESTRITAMENTE DINÂMICO)
+# ABA 4: FMC (LISTA DEFINITIVA DO DB)
 # ==========================================
 with tab4:
     st.header("🚀 Flight Management Computer")
     
-    # 1. VALIDAÇÃO DE CONEXÃO
-    if not st.session_state.get('dados_campanha'):
-        st.warning("📡 Sincronize a Telemetria na barra lateral para carregar os dados do mapa.")
+    # 1. VALIDAÇÃO DE ROTA
+    if not st.session_state.get('navlog_manual'):
+        st.info("⚠️ Configure uma rota na Aba 1 ou Aba 3 para ativar o FMC.")
     else:
-        # 2. EXTRAÇÃO EM TEMPO REAL
-        # Pegamos a lista de aeródromos EXATAMENTE como o servidor enviou
-        aerodromos_servidor = st.session_state.dados_campanha.get('Airfields', [])
-        # Criamos a lista de nomes para o selectbox
-        nomes_bases_vivas = sorted([b.get('Name') for b in aerodromos_servidor])
+        # 2. FONTE DE DADOS DEFINITIVA (SEU DB)
+        # Ordenamos a lista alfabeticamente para facilitar a busca
+        lista_aerodromos_db = sorted(list(db_altitudes_tecnico.keys()))
 
-        if not nomes_bases_vivas:
-            st.error("Nenhum aeródromo encontrado nos dados do servidor.")
-        else:
-            # 3. INTERFACE DE SELEÇÃO DINÂMICA
-            with st.expander("🌍 Aeródromos Ativos na Missão", expanded=True):
-                col_dep, col_arr = st.columns(2)
-                
-                with col_dep:
-                    # O menu agora é preenchido APENAS com nomes vindos da API
-                    base_dep = st.selectbox("Decolagem de:", nomes_bases_vivas, key="fmc_dep_server")
-                    # Busca a altitude na nossa tabela técnica. Se não existir, usa 50m (padrão).
-                    alt_dep = db_altitudes_tecnico.get(base_dep, 50)
-                    st.caption(f"Altitude Base: {alt_dep}m")
-                    
-                with col_arr:
-                    base_arr = st.selectbox("Destino final:", nomes_bases_vivas, key="fmc_arr_server")
-                    alt_arr = db_altitudes_tecnico.get(base_arr, 50)
-                    st.caption(f"Altitude Alvo: {alt_arr}m")
-
-            # 4. PERFORMANCE VERTICAL (VNAV)
-            # Puxamos as razões de subida do avião selecionado na Aba 1
-            av_nome = st.session_state.get('av_nome_selecionado', "He-111 H-16")
-            av = db_avioes.get(av_nome, {})
+        # 3. INTERFACE DE SELEÇÃO
+        with st.expander("🌍 Configuração de Aeródromos (DB Interno)", expanded=True):
+            col_dep, col_arr = st.columns(2)
             
-            with st.expander("📈 Perfil de Voo", expanded=True):
-                v1, v2, v3, v4 = st.columns(4)
-                with v1: alt_cruzeiro = st.number_input("Cruzeiro (m)", value=4000, step=500)
-                with v2: climb_rate = st.number_input("Subida (m/s)", value=float(av.get('climb_rate_default', 2.5)))
-                with v3: descent_rate = st.number_input("Descida (m/s)", value=float(av.get('descent_rate_default', 4.0)))
-                with v4: alt_pista = st.number_input("Alt. Alvo (m)", value=alt_arr)
+            with col_dep:
+                # Agora o menu usa estritamente a sua lista do DB
+                base_dep = st.selectbox("Decolagem de:", lista_aerodromos_db, key="fmc_dep_estatico")
+                alt_dep = db_altitudes_tecnico[base_dep] # Acesso direto, sem fallback necessário
+                st.write(f"**Altitude Base:** {alt_dep}m")
+                
+            with col_arr:
+                base_arr = st.selectbox("Destino Final:", lista_aerodromos_db, key="fmc_arr_estatico")
+                alt_arr = db_altitudes_tecnico[base_arr]
+                st.write(f"**Altitude Alvo:** {alt_arr}m")
+
+        # 4. PERFORMANCE VERTICAL (VNAV)
+        av_nome = st.session_state.get('av_nome_selecionado', "He-111 H-16")
+        av = db_avioes.get(av_nome, {})
+
+        with st.expander("📈 Perfil de Voo", expanded=True):
+            v1, v2, v3, v4 = st.columns(4)
+            with v1: alt_cruzeiro = st.number_input("Cruzeiro (m)", value=4000, step=500)
+            with v2: climb_rate = st.number_input("Subida (m/s)", value=float(av.get('climb_rate_default', 2.5)))
+            with v3: descent_rate = st.number_input("Descida (m/s)", value=float(av.get('descent_rate_default', 4.0)))
+            with v4: alt_pista = st.number_input("Alt. Aeródromo (m)", value=alt_arr)
 
         # --- CÁLCULO DE ROTA ---
         nav_tas = float(st.session_state.get('vel_calc', 320))
