@@ -9,40 +9,28 @@ from deep_translator import GoogleTranslator
 # ==========================================
 # 0. INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE)
 # ==========================================
-# Variáveis de Meteorologia
-if 'vento_vel_cb' not in st.session_state: st.session_state.vento_vel_cb = 5.0
-if 'vento_dir_cb' not in st.session_state: st.session_state.vento_dir_cb = 45.0
-if 'temp_cb' not in st.session_state: st.session_state.temp_cb = 15.0
-if 'status_cb' not in st.session_state: st.session_state.status_cb = "A aguardar sincronização..."
-if 'dados_campanha' not in st.session_state: st.session_state.dados_campanha = None
-
-# Memória do NavLog e FMC (O QUE ESTAVA A FALTAR)
+if 'vento_vel_cb'    not in st.session_state: st.session_state.vento_vel_cb    = 5.0
+if 'vento_dir_cb'    not in st.session_state: st.session_state.vento_dir_cb    = 45.0
+if 'temp_cb'         not in st.session_state: st.session_state.temp_cb         = 15.0
+if 'status_cb'       not in st.session_state: st.session_state.status_cb       = "A aguardar sincronização..."
+if 'dados_campanha'  not in st.session_state: st.session_state.dados_campanha  = None
+# Clima amanhã
+if 'temp_amanha_cb'      not in st.session_state: st.session_state.temp_amanha_cb      = 15.0
+if 'vento_vel_amanha_cb' not in st.session_state: st.session_state.vento_vel_amanha_cb = 5.0
+if 'vento_dir_amanha_cb' not in st.session_state: st.session_state.vento_dir_amanha_cb = 45.0
+# NavLog / FMC
 if 'navlog_manual' not in st.session_state:
-    st.session_state.navlog_manual = [{"Perna": "Base ➔ Alvo", "Distância (km)": 50.0, "Rumo (TC)": 90.0}]
-
-if 'index_perna_ativa' not in st.session_state: 
-    st.session_state.index_perna_ativa = 0
-
-if 'cronometro_rodando' not in st.session_state: 
-    st.session_state.cronometro_rodando = False
-
-if 'tempo_inicio_perna' not in st.session_state: 
-    st.session_state.tempo_inicio_perna = None
-
-# Controlo de Ficheiros e Cálculos
-if 'vel_calc' not in st.session_state: st.session_state.vel_calc = 320.0
-if 'dist_calc' not in st.session_state: st.session_state.dist_calc = 250.0
-if 'last_file_hash' not in st.session_state: st.session_state.last_file_hash = None
-
-if 'tempo_pausado_acumulado' not in st.session_state: 
-    st.session_state.tempo_pausado_acumulado = 0.0
-
-# --- Inicialização de variáveis de tempo ---
-if 'tempo_inicio_missao_absoluto' not in st.session_state:
-    st.session_state.tempo_inicio_missao_absoluto = None
-
-if 'cronometro_rodando' not in st.session_state:
-    st.session_state.cronometro_rodando = False
+    st.session_state.navlog_manual = [{"Perna": "Base ➔ Alvo", "Distância (km)": 50.0, "Rumo (TC)": 90.0, "TAS (km/h)": 330, "Altitude (m)": 2000}]
+if 'index_perna_ativa'            not in st.session_state: st.session_state.index_perna_ativa            = 0
+if 'cronometro_rodando'           not in st.session_state: st.session_state.cronometro_rodando           = False
+if 'tempo_inicio_perna'           not in st.session_state: st.session_state.tempo_inicio_perna           = None
+if 'tempo_pausado_acumulado'      not in st.session_state: st.session_state.tempo_pausado_acumulado      = 0.0
+if 'tempo_inicio_missao_absoluto' not in st.session_state: st.session_state.tempo_inicio_missao_absoluto = None
+# Controlo
+if 'vel_calc'            not in st.session_state: st.session_state.vel_calc            = 320.0
+if 'dist_calc'           not in st.session_state: st.session_state.dist_calc           = 250.0
+if 'last_file_hash'      not in st.session_state: st.session_state.last_file_hash      = None
+if 'av_nome_selecionado' not in st.session_state: st.session_state.av_nome_selecionado = "He-111 H-16"
 
 # ==========================================
 # 1. FUNÇÕES DA API E TRADUÇÃO
@@ -94,27 +82,14 @@ def fetch_combatbox_data():
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
 
 def calcular_rumo_e_distancia(p1, p2):
-    # No IL-2 e planners, tratamos lat/lng como um grid X, Y plano
-    # lng = X (Leste/Oeste)
-    # lat = Y (Norte/Sul)
-    
-    dx = p2['lng'] - p1['lng']
-    dy = p2['lat'] - p1['lat']
-    
-    # 1. CÁLCULO DO RUMO (Bearing Cartesiano)
-    # O math.atan2(dx, dy) calcula o ângulo a partir do topo (Norte = 0°)
-    rumo_rad = math.atan2(dx, dy)
-    rumo_deg = math.degrees(rumo_rad)
-    
-    # Normaliza para 0-360°
-    rumo_final = (rumo_deg + 360) % 360
-    
-    # 2. CÁLCULO DA DISTÂNCIA (Pitágoras)
-    # No seu JSON, as coordenadas estão em graus decimais.
-    # 1 grau de latitude/longitude no mapa Rheinland equivale a ~111.12 km
-    dist_raw = math.sqrt(dx**2 + dy**2)
-    distancia_km = dist_raw * 111.12 
-    
+    # No IL-2 Mission Planner (Rheinland):
+    # lat cresce para NORTE (menos negativo = mais norte), lng cresce para LESTE.
+    # Rumo correto: atan2(dlng, dlat) — Norte = dlat+, Leste = dlng+
+    # Escala: 3.872 km/grau (calibrado contra Plan Summary do Mission Planner)
+    dlng = p2['lng'] - p1['lng']
+    dlat = p2['lat'] - p1['lat']
+    rumo_final   = (math.degrees(math.atan2(dlng, dlat)) + 360) % 360
+    distancia_km = math.sqrt(dlng**2 + dlat**2) * 3.872
     return rumo_final, distancia_km
 
 # ==========================================
@@ -242,34 +217,43 @@ with st.sidebar:
         fetch_combatbox_data()
         st.info(st.session_state.status_cb)
         st.divider()
-        st.markdown("**METEOROLOGIA: MISSÃO ATUAL**")
-        st.metric("Vento Dominante", f"{st.session_state.vento_vel_cb} m/s")
-        st.metric("Direção do Vento", f"{st.session_state.vento_dir_cb}°")
-        st.metric("Temperatura Local", f"{st.session_state.temp_cb} °C")
+        # Dados da campanha
+        _dados = st.session_state.dados_campanha
+        if _dados:
+            _dia = _dados.get("Day", {})
+            st.markdown(f"**📅 Dia {_dia.get('DayInCampaign','?')}** — {_dia.get('Day','?')}/{_dia.get('Month','?')}/{_dia.get('Year','?')}")
+            st.markdown(f"**🏆** {_dados.get('WinningCoalition','—')} | **⏳** {_dados.get('DaysRemaining','?')} dias restantes")
+            st.divider()
+        st.markdown("**☀️ METEOROLOGIA: HOJE**")
+        st.metric("Vento", f"{st.session_state.vento_vel_cb} m/s")
+        st.metric("Direção", f"{st.session_state.vento_dir_cb:.0f}°")
+        st.metric("Temperatura", f"{st.session_state.temp_cb} °C")
+        st.divider()
+        st.markdown("**🌙 METEOROLOGIA: AMANHÃ**")
+        st.metric("Vento", f"{st.session_state.vento_vel_amanha_cb} m/s")
+        st.metric("Direção", f"{st.session_state.vento_dir_amanha_cb:.0f}°")
+        st.metric("Temperatura", f"{st.session_state.temp_amanha_cb} °C")
         st.caption(f"⏱️ Última sincronização: {time.strftime('%H:%M:%S')}")
         
     painel_telemetria_ativo()
 
-    # ── PLAYER FMC GLOBAL (visível em todas as abas) ─────────────────
+    # ── PLAYER FMC GLOBAL — visível em TODAS as abas ─────────────────
     if st.session_state.get('cronometro_rodando') and st.session_state.get('navlog_manual'):
-        # Recalcula pernas a partir do session_state (independente de qual tab está aberta)
         _w_dir   = float(st.session_state.get('vento_dir_cb', 45.0))
         _w_spd   = float(st.session_state.get('vento_vel_cb', 5.0) * 3.6)
         _nav_tas = float(st.session_state.get('vel_calc', 320))
-        _total_km_sb  = 0.0
-        _pernas_sb    = []
-        for _idx, _linha in enumerate(st.session_state.navlog_manual):
+        _pernas_sb = []
+        for _i, _ln in enumerate(st.session_state.navlog_manual):
             try:
-                _dist = float(_linha.get("Distância (km)", 0.0))
-                _tc   = float(_linha.get("Rumo (TC)", 0.0))
-                _wa   = math.radians(_w_dir - _tc)
+                _d  = float(_ln.get("Distância (km)", 0.0))
+                _tc = float(_ln.get("Rumo (TC)", 0.0))
+                _wa = math.radians(_w_dir - _tc)
                 _swca = max(-1.0, min(1.0, (_w_spd * math.sin(_wa)) / _nav_tas))
                 _wca  = math.degrees(math.asin(_swca))
                 _th   = (_tc + _wca + 360) % 360
                 _gs   = max(1.0, (_nav_tas * math.cos(math.radians(_wca))) - (_w_spd * math.cos(_wa)))
-                _tempo = (_dist / _gs) * 3600
-                _total_km_sb += _dist
-                _pernas_sb.append({"nome": _linha.get("Perna", f"WP{_idx}"), "proa": _th, "tempo": _tempo})
+                _pernas_sb.append({"nome": _ln.get("Perna", f"WP{_i}"), "proa": _th,
+                                   "tempo": (_d / _gs) * 3600})
             except: continue
 
         st.divider()
@@ -287,24 +271,22 @@ with st.sidebar:
                     _restante = max(0, _p['tempo'] - _passado)
                     _m, _s    = divmod(int(_restante), 60)
                     st.metric("⏱️ Tempo WP", f"{_m:02d}:{_s:02d}")
-                    # Progresso da perna
-                    _prog = min(1.0, _passado / max(_p['tempo'], 1))
-                    st.progress(_prog)
+                    st.progress(min(1.0, _passado / max(_p['tempo'], 1)))
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
-                    if st.button("⏭️ NEXT", use_container_width=True, key="sb_next_global"):
+                    if st.button("⏭️ NEXT", use_container_width=True, key="sb_next_g"):
                         st.session_state.index_perna_ativa += 1
                         st.session_state.tempo_inicio_perna = time.time()
                         st.rerun()
                 with col_s2:
-                    if st.button("⏹️ STOP", use_container_width=True, key="sb_stop_global"):
+                    if st.button("⏹️ STOP", use_container_width=True, key="sb_stop_g"):
                         st.session_state.cronometro_rodando           = False
                         st.session_state.index_perna_ativa            = 0
                         st.session_state.tempo_inicio_missao_absoluto = None
                         st.rerun()
             else:
                 st.success("🏁 Objetivo Atingido!")
-                if st.button("🔄 Reset FMC", use_container_width=True, key="sb_reset_global"):
+                if st.button("🔄 Reset FMC", use_container_width=True, key="sb_reset_g"):
                     st.session_state.cronometro_rodando           = False
                     st.session_state.index_perna_ativa            = 0
                     st.session_state.tempo_inicio_missao_absoluto = None
@@ -315,85 +297,6 @@ with st.sidebar:
 st.title("🛩️ Painel Tático C4ISR")
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog & E6B", "🚀 FMC (Ativo)", "🌐 Inteligência"])
 
-# ──────────────────────────────────────────────────────────────
-# HELPER: renderiza o HUD do FMC (reutilizado na tab4 e sidebar)
-# ──────────────────────────────────────────────────────────────
-def _render_fmc_hud(pernas, total_km, dist_descent, nav_tas, compact=False):
-    idx = st.session_state.index_perna_ativa
-    if idx < len(pernas):
-        p = pernas[idx]
-        if compact:
-            st.markdown(f"**📍 {p['nome']}**")
-            st.markdown(f"### 🧭 {p['proa']:.0f}°")
-        else:
-            h1, h2, h3 = st.columns([2, 1, 1])
-            with h1:
-                st.subheader(f"📍 Perna: {p['nome']}")
-                st.markdown(f"## 🧭 PROA: {p['proa']:.0f}°")
-
-        if st.session_state.cronometro_rodando and st.session_state.tempo_inicio_perna:
-            passado  = time.time() - st.session_state.tempo_inicio_perna
-            restante = max(0, p['tempo'] - passado)
-            m, s     = divmod(int(restante), 60)
-            if compact:
-                st.metric("⏱️ Tempo WP", f"{m:02d}:{s:02d}")
-            else:
-                with h2:
-                    st.metric("⏱️ Tempo WP", f"{m:02d}:{s:02d}")
-        elif not compact:
-            with h2:
-                st.metric("⏱️ Tempo WP", "--:--")
-
-        # VNAV em tempo real
-        if st.session_state.cronometro_rodando and st.session_state.tempo_inicio_missao_absoluto:
-            tempo_total_seg      = time.time() - st.session_state.tempo_inicio_missao_absoluto
-            dist_percorrida      = (tempo_total_seg / 3600) * nav_tas
-            dist_para_tod        = (total_km - dist_descent) - dist_percorrida
-            st.divider()
-            if 0 < dist_para_tod <= 10:
-                st.warning(f"📉 **PREPARAR DESCIDA:** TOD em {dist_para_tod:.1f} km")
-            elif dist_para_tod <= 0:
-                st.error(f"⬇️ **INICIAR DESCIDA!** Passou {abs(dist_para_tod):.1f} km do TOD")
-            else:
-                st.info(f"📊 Cruzeiro Estável. Descida em {dist_para_tod:.1f} km")
-
-        # Botões
-        btn_key_suf = "compact" if compact else "full"
-        if compact:
-            col_s1, col_s2 = st.columns(2)
-            with col_s1:
-                if st.button("⏭️ NEXT", use_container_width=True, key=f"next_{btn_key_suf}"):
-                    st.session_state.index_perna_ativa += 1
-                    st.session_state.tempo_inicio_perna = time.time()
-                    st.rerun()
-            with col_s2:
-                if st.button("⏹️ STOP", use_container_width=True, key=f"stop_{btn_key_suf}"):
-                    st.session_state.cronometro_rodando = False
-                    st.session_state.index_perna_ativa  = 0
-                    st.session_state.tempo_inicio_missao_absoluto = None
-                    st.rerun()
-        else:
-            with h3:
-                if not st.session_state.cronometro_rodando:
-                    if st.button("▶️ START", use_container_width=True, key=f"start_{btn_key_suf}"):
-                        st.session_state.cronometro_rodando           = True
-                        st.session_state.tempo_inicio_perna           = time.time()
-                        st.session_state.tempo_inicio_missao_absoluto = time.time()
-                        st.rerun()
-                else:
-                    if st.button("⏭️ NEXT", use_container_width=True, key=f"next_{btn_key_suf}"):
-                        st.session_state.index_perna_ativa += 1
-                        st.session_state.tempo_inicio_perna = time.time()
-                        st.rerun()
-    else:
-        st.success("🏁 Objetivo Atingido!")
-        if st.button("🔄 Reiniciar FMC", key=f"reset_{btn_key_suf}"):
-            st.session_state.index_perna_ativa            = 0
-            st.session_state.cronometro_rodando           = False
-            st.session_state.tempo_inicio_missao_absoluto = None
-            st.rerun()
-
-
 # ==========================================
 # ABA 1: HANGAR (LOGÍSTICA E PREPARAÇÃO)
 # ==========================================
@@ -403,7 +306,7 @@ with tab1:
     # --- Seção de Importação ---
     col_f, col_clear = st.columns([3, 1])
     with col_f: 
-        arquivo_plano = st.file_uploader("📥 Importar Rota (.json)", type=["json"])
+        arquivo_plano = st.file_uploader("📥 Importar Plano de Voo (.json)", type=["json"])
         
         if arquivo_plano is not None:
             file_content = arquivo_plano.getvalue()
@@ -413,24 +316,40 @@ with tab1:
                 st.session_state.last_file_hash = current_hash
                 try:
                     dados_plano = json.loads(file_content)
-                    if "routes" in dados_plano: 
-                        rota = dados_plano["routes"][0]
-                        coords = rota["latLngs"]
-                        navlog_temp = []
-                        dist_total = 0.0
-                        for i in range(len(coords)-1):
-                            dx, dy = coords[i+1]['lng'] - coords[i]['lng'], coords[i+1]['lat'] - coords[i]['lat']
-                            d_perna = math.hypot(dx, dy) * 3.0 
-                            dist_total += d_perna
-                            tc_deg = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
-                            navlog_temp.append({"Perna": f"WP{i}➔WP{i+1}", "Distância (km)": round(d_perna, 1), "Rumo (TC)": round(tc_deg, 0)})
-                        st.session_state.navlog_manual = navlog_temp
-                        st.session_state.dist_calc = dist_total
-                    else: 
+                    if "routes" in dados_plano:
+                        # Usa isFlightPlan=true (não routes[0] que pode ser linha de frente)
+                        plano = next((r for r in dados_plano["routes"] if r.get("isFlightPlan")), None)
+                        if plano is None:
+                            st.error("❌ Nenhuma rota de plano de voo encontrada. Marque uma rota como 'Flight Plan' no Mission Planner.")
+                        else:
+                            coords    = plano["latLngs"]
+                            speeds    = plano.get("speeds", [])
+                            altitudes = plano.get("altitudes", [])
+                            navlog_temp = []
+                            dist_total  = 0.0
+                            for i in range(len(coords) - 1):
+                                rumo, dist = calcular_rumo_e_distancia(coords[i], coords[i+1])
+                                dist_total += dist
+                                vel_p = int(speeds[i])      if i < len(speeds)        else int(plano.get("speed", 330))
+                                alt_p = int(altitudes[i+1]) if i+1 < len(altitudes)  else int(plano.get("altitude", 2000))
+                                navlog_temp.append({
+                                    "Perna":          f"WP{i}➔WP{i+1}",
+                                    "Distância (km)": round(dist, 1),
+                                    "Rumo (TC)":      round(rumo, 0),
+                                    "TAS (km/h)":     vel_p,
+                                    "Altitude (m)":   alt_p
+                                })
+                            st.session_state.navlog_manual = navlog_temp
+                            st.session_state.dist_calc     = dist_total
+                            if navlog_temp:
+                                st.session_state.vel_calc = float(navlog_temp[0]["TAS (km/h)"])
+                            st.success(f"✅ {len(navlog_temp)} pernas extraídas de '{plano.get('name','Rota')}' → NavLog atualizado!")
+                    else:
                         st.session_state.navlog_manual = dados_plano
                         st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
-                    st.success("✅ Rota carregada com sucesso!")
-                except: st.error("Erro ao processar o arquivo JSON.")
+                        st.success("✅ Rota carregada com sucesso!")
+                except Exception as e:
+                    st.error(f"Erro ao processar o arquivo JSON: {e}")
             
     with col_clear:
         if st.button("🗑️ Reset Rota", use_container_width=True): 
@@ -440,13 +359,13 @@ with tab1:
 
     st.divider()
     
-    # --- Seleção de Avião e Pesos (Chaves Atualizadas) ---
+    # --- Seleção de Avião e Pesos ---
     c1, c2 = st.columns(2)
     with c1:
         av_nome = st.selectbox("Selecione a Aeronave", list(db_avioes.keys()))
+        st.session_state.av_nome_selecionado = av_nome  # salva para o FMC
         av = db_avioes[av_nome]
         
-        # Uso das chaves longas conforme sua base de dados
         missao_dist = st.number_input("Distância da Missão (km)", value=float(st.session_state.get('dist_calc', 100.0)))
         missao_vel = st.number_input("Velocidade de Cruzeiro (km/h)", value=float(av['vel_cruzeiro_padrao']))
         margem_seg = st.slider("Reserva de Combustível (%)", 0, 100, 30)
@@ -457,28 +376,30 @@ with tab1:
         st.caption(f"🛡️ Armamento Fixo: {av.get('armamento_fixo', 'Não listado')}")
         
     # --- Cálculos Logísticos ---
-    tempo_estimado = (missao_dist / missao_vel) * 60
-    # Chave consumo_l_min
-    comb_l = tempo_estimado * av['consumo_l_min'] * (1 + (margem_seg / 100))
-    # Chave peso_base_sem_combustivel
-    peso_total = av['peso_base_sem_combustivel'] + av['modificacoes'][mod_sel] + av['presets_bombas'][bomb_sel] + (comb_l * 0.72)
-    
-    st.divider()
-    col_res1, col_res2 = st.columns(2)
-    with col_res1:
-        if peso_total <= av['peso_max']:
-            st.success(f"⚖️ Peso Total: **{peso_total:.0f} kg** / {av['peso_max']} kg")
-        else:
-            st.error(f"⚠️ SOBRECARGA: **{peso_total:.0f} kg** / {av['peso_max']} kg")
-    with col_res2:
-        st.info(f"⛽ Combustível: **{comb_l:.0f} Litros**")
-        st.caption(f"Capacidade Máxima: {av['tanque_max_l']} L")
+    if missao_vel > 0:
+        tempo_estimado = (missao_dist / missao_vel) * 60
+        comb_l = tempo_estimado * av['consumo_l_min'] * (1 + (margem_seg / 100))
+        peso_total = av['peso_base_sem_combustivel'] + av['modificacoes'][mod_sel] + av['presets_bombas'][bomb_sel] + (comb_l * 0.72)
+        
+        st.divider()
+        col_res1, col_res2, col_res3 = st.columns(3)
+        with col_res1:
+            if peso_total <= av['peso_max']:
+                st.success(f"⚖️ Peso Total: **{peso_total:.0f} kg** / {av['peso_max']} kg")
+            else:
+                st.error(f"⚠️ SOBRECARGA: **{peso_total:.0f} kg** / {av['peso_max']} kg")
+        with col_res2:
+            if comb_l > av['tanque_max_l']:
+                st.error(f"⛽ Combustível: **{comb_l:.0f} L** ⚠️ EXCEDE TANQUE ({av['tanque_max_l']} L)")
+            else:
+                st.info(f"⛽ Combustível: **{comb_l:.0f} L** / {av['tanque_max_l']} L")
+        with col_res3:
+            st.info(f"⏱️ Tempo estimado: **{tempo_estimado:.0f} min** ({tempo_estimado/60:.1f}h)")
         
 # ==========================================
 # ABA 2: CONFIGURAÇÃO DA MIRA (LOFTE 7)
 # ==========================================
 with tab2:
-    # CSS para Sliders Touch-Friendly (Gordos para facilitar o uso no tablet/celular)
     st.markdown("""
         <style>
             .stSlider [data-baseweb="slider"] { height: 45px; }
@@ -487,89 +408,49 @@ with tab2:
         </style>
     """, unsafe_allow_html=True)
 
-    st.header("🎯 Ajuste de Vento da Mira")
-    st.caption("Ajuste os valores abaixo para obter os parâmetros de entrada do Lofte 7.")
+    st.header("🎯 Ajuste de Vento da Mira (Lofte 7)")
+    st.caption("Calcule os parâmetros de entrada do Lofte 7 a partir da proa e vento.")
 
-    # --- INPUTS (OS 3 FATORES ESSENCIAIS) ---
-    # Plane Heading: Sua proa atual
-    phead = st.slider("🧭 PLANE HEADING (°)", 0, 360, 0, step=1)
-    
-    # Wind Direction (FROM): De onde o vento vem no mapa
-    whead = st.slider("🌬️ WIND DIRECTION (FROM °)", 0, 360, 0, step=1)
-    
-    # Wind Speed: Velocidade do vento no mapa
-    wspeed = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.1)
+    usar_api_vento = False
+    if st.session_state.dados_campanha:
+        col_btn, col_info = st.columns([1, 3])
+        with col_btn:
+            usar_api_vento = st.button("🌬️ Usar Vento da API")
+        with col_info:
+            st.caption(f"API atual: {st.session_state.vento_vel_cb} m/s de {st.session_state.vento_dir_cb:.0f}°")
 
-    # --- CÁLCULO DO VETOR RELATIVO (LÓGICA SPIFF) ---
-    # O "Sight Wind Hdg" é o ângulo do vento em relação ao nariz do avião
-    # A fórmula inverte o sentido para que o piloto saiba para onde o vento "aponta" no visor
-    sight_wind_hdg = (whead - phead + 360) % 360
-    
-    # No Lofte 7, a velocidade inserida é a velocidade real do vento (m/s)
+    phead  = st.slider("🧭 PLANE HEADING (°)",      0, 359,
+                       value=0, step=1, key="phdg_lofte")
+    whead_def  = int(st.session_state.vento_dir_cb) if usar_api_vento else 0
+    wspd_def   = int(st.session_state.vento_vel_cb) if usar_api_vento else 0
+    whead  = st.slider("🌬️ WIND DIRECTION (FROM °)", 0, 359,
+                       value=whead_def, step=1, key="whdg_lofte")
+    wspeed = st.slider("💨 WIND SPEED (m/s)",         0, 30,
+                       value=wspd_def,  step=1, key="wspeed_lofte")
+
+    # Fórmula signed -179/+180 (igual ao site spiff.ddns.net/il2bcalc/)
+    raw_hdg        = (whead - phead) % 360
+    sight_wind_hdg = raw_hdg if raw_hdg <= 180 else raw_hdg - 360
     sight_wind_speed = wspeed
 
-    # --- O ÚNICO RESULTADO QUE VOCÊ QUER ---
     st.divider()
-    
     res1, res2 = st.columns(2)
-    
     with res1:
-        st.metric(label="× Sight Wind Hdg", value=f"{sight_wind_hdg}°")
+        st.metric(label="× Sight Wind Hdg",   value=f"{sight_wind_hdg:+d}°")
         st.caption("Gire o seletor de direção na mira para este valor.")
-
     with res2:
         st.metric(label="× Sight Wind Speed", value=f"{sight_wind_speed} m/s")
         st.caption("Ajuste a força do vento na engrenagem da mira.")
 
-    # --- DICA TÁTICA ---
     if sight_wind_speed > 0:
-        st.info(f"💡 Configure sua mira com **{sight_wind_hdg}°** e **{sight_wind_speed} m/s** antes de iniciar o bomb run.")
+        direcao_txt = "DIREITA ➡️" if sight_wind_hdg > 0 else ("ESQUERDA ⬅️" if sight_wind_hdg < 0 else "FRONTAL ⬆️")
+        st.info(f"💡 Configure sua mira com **{sight_wind_hdg:+d}°** ({direcao_txt}) e **{sight_wind_speed} m/s** antes do bomb run.")
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
 with tab3:
     st.header("🗺️ Centro de Navegação")
-    
-    # --- NOVO: IMPORTADOR AUTOMÁTICO DE JSON ---
-    st.subheader("📥 Importar Planejamento")
-    upload_plano = st.file_uploader("Arraste o seu missao teste.json aqui", type=['json'])
-
-    if upload_plano:
-        try:
-            dados_plano = json.load(upload_plano)
-            # Localiza especificamente a rota marcada como plano de voo
-            plano_de_voo = next((r for r in dados_plano['routes'] if r.get('isFlightPlan')), None)
-            
-            if plano_de_voo:
-                lat_lngs = plano_de_voo.get('latLngs', [])
-                speeds = plano_de_voo.get('speeds', [])
-                altitudes = plano_de_voo.get('altitudes', [])
-                
-                novo_navlog = []
-                for i in range(len(lat_lngs) - 1):
-                    p_atual = lat_lngs[i]
-                    p_proximo = lat_lngs[i+1]
-                    
-                    rumo, dist = calcular_rumo_e_distancia(p_atual, p_proximo)
-                    
-                    # Extrai velocidade e altitude conforme as listas do JSON
-                    vel_perna = speeds[i] if i < len(speeds) else plano_de_voo.get('speed', 330)
-                    alt_perna = altitudes[i+1] if i+1 < len(altitudes) else plano_de_voo.get('altitude', 2000)
-
-                    novo_navlog.append({
-                        "Perna": f"WP {i} -> WP {i+1}",
-                        "Distância (km)": round(dist, 1),
-                        "Rumo (TC)": round(rumo, 1),
-                        "TAS (km/h)": int(vel_perna),
-                        "Altitude (m)": int(alt_perna)
-                    })
-                
-                st.session_state.navlog_manual = novo_navlog
-                st.success(f"✅ {len(novo_navlog)} pernas extraídas com sucesso!")
-            else:
-                st.error("Nenhuma rota de voo ativa encontrada no arquivo.")
-        except Exception as e:
-            st.error(f"Erro ao ler arquivo: {e}")
+    st.caption("📥 Importe o plano de voo na **Aba 1 (Hangar)** para preencher o NavLog automaticamente.")
 
     st.divider()
 
@@ -736,27 +617,70 @@ with tab4:
         dist_climb   = 0.0
         dist_descent = 0.0
         if pernas_fmc:
-            dist_climb   = ((alt_cruzeiro - alt_dep) / max(climb_rate, 0.1)) * (nav_tas / 3600)
+            dist_climb   = ((alt_cruzeiro - alt_dep) / max(climb_rate, 0.1))   * (nav_tas / 3600)
             dist_descent = ((alt_cruzeiro - alt_arr) / max(descent_rate, 0.1)) * (nav_tas / 3600)
             if dist_climb + dist_descent > total_km:
                 f = total_km / (dist_climb + dist_descent)
                 dist_climb *= f; dist_descent *= f
-            
             df_vnav = pd.DataFrame({
                 "Distância (km)": [0, dist_climb, max(dist_climb, total_km - dist_descent), total_km],
-                "Altitude (m)": [alt_dep, alt_cruzeiro, alt_cruzeiro, alt_arr]
+                "Altitude (m)":   [alt_dep, alt_cruzeiro, alt_cruzeiro, alt_arr]
             })
             st.area_chart(df_vnav.set_index("Distância (km)"))
 
         st.divider()
 
-        # HUD de execução — dentro do with tab4 (escopo correto)
+        # HUD de execução — definido UMA VEZ dentro do with tab4
         @st.fragment(run_every="1s")
-        def fmc_hud_tab4():
-            _render_fmc_hud(pernas_fmc, total_km, dist_descent, nav_tas, compact=False)
+        def fmc_hud_final():
+            idx = st.session_state.index_perna_ativa
+            if idx < len(pernas_fmc):
+                p = pernas_fmc[idx]
+                h1, h2, h3 = st.columns([2, 1, 1])
+                with h1:
+                    st.subheader(f"📍 Perna: {p['nome']}")
+                    st.markdown(f"## 🧭 PROA: {p['proa']:.0f}°")
+                with h2:
+                    if st.session_state.cronometro_rodando and st.session_state.tempo_inicio_perna:
+                        passado  = time.time() - st.session_state.tempo_inicio_perna
+                        restante = max(0, p['tempo'] - passado)
+                        m, s     = divmod(int(restante), 60)
+                        st.metric("⏱️ Tempo WP", f"{m:02d}:{s:02d}")
+                    else:
+                        st.metric("⏱️ Tempo WP", "--:--")
+                # VNAV em tempo real
+                if st.session_state.cronometro_rodando and st.session_state.tempo_inicio_missao_absoluto:
+                    tempo_seg       = time.time() - st.session_state.tempo_inicio_missao_absoluto
+                    dist_percorrida = (tempo_seg / 3600) * nav_tas
+                    dist_para_tod   = (total_km - dist_descent) - dist_percorrida
+                    st.divider()
+                    if 0 < dist_para_tod <= 10:
+                        st.warning(f"📉 **PREPARAR DESCIDA:** TOD em {dist_para_tod:.1f} km")
+                    elif dist_para_tod <= 0:
+                        st.error(f"⬇️ **INICIAR DESCIDA!** Passou {abs(dist_para_tod):.1f} km do TOD")
+                    else:
+                        st.info(f"📊 Cruzeiro Estável. Descida em {dist_para_tod:.1f} km")
+                with h3:
+                    if not st.session_state.cronometro_rodando:
+                        if st.button("▶️ START", use_container_width=True):
+                            st.session_state.cronometro_rodando           = True
+                            st.session_state.tempo_inicio_perna           = time.time()
+                            st.session_state.tempo_inicio_missao_absoluto = time.time()
+                            st.rerun()
+                    else:
+                        if st.button("⏭️ NEXT", use_container_width=True):
+                            st.session_state.index_perna_ativa += 1
+                            st.session_state.tempo_inicio_perna = time.time()
+                            st.rerun()
+            else:
+                st.success("🏁 Objetivo Atingido!")
+                if st.button("🔄 Reiniciar FMC"):
+                    st.session_state.index_perna_ativa            = 0
+                    st.session_state.cronometro_rodando           = False
+                    st.session_state.tempo_inicio_missao_absoluto = None
+                    st.rerun()
 
-        fmc_hud_tab4()
-
+        fmc_hud_final()
 
 # ==========================================
 # ABA 5: INTELIGÊNCIA TÁTICA (C4ISR)
