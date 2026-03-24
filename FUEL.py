@@ -57,34 +57,47 @@ def fetch_combatbox_data():
 
 
 # ==========================================
-# 2. BASE DE DADOS: Pesos e Aeronaves
+# 2. BASE DE DADOS: AERONAVES (CHAVES FIXADAS)
 # ==========================================
-peso_bombas = {"SC 50": 50, "SC 250": 250, "SC 500": 500, "SC 1000": 1090, "SC 1800": 1780, "SC 2500": 2400}
-
 db_avioes = {
-    "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500, "peso_max": 14000, "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
-        "armamento_fixo": "6 x 7.92 mm MG-15",
-        "modificacoes": {"Padrão": 0, "Torre Frontal": 46, "Torre Ventral": 147, "Ambas": 193},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "4x SC 250": 1000, "2x SC 1000": 2180}
-    },
     "He-111 H-16": {
-        "peso_base_sem_combustivel": 9300, "peso_max": 14000, "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
-        "armamento_fixo": "4x 7.92mm | 1x 20mm | 1x 13mm",
-        "modificacoes": {"Padrão": 0},
-        "presets_bombas": {"Vazio": 0, "16x SC 50": 800, "32x SC 50": 1600, "4x SC 250": 1000, "8x SC 250": 2000, "2x SC 500": 1000, "2x SC 1800": 3560, "1x SC 2500": 2400}
+        "peso_base": 9300, 
+        "peso_max": 14000, 
+        "cons": 10.2, 
+        "vel": 330,
+        "mods": {"Padrão": 0},
+        "bombas": {
+            "Vazio": 0, 
+            "1x SC 2500": 2400, 
+            "2x SC 1800": 3560, 
+            "2x SC 1000": 2180, 
+            "8x SC 250": 2000, 
+            "32x SC 50": 1600
+        }
+    },
+    "He-111 H-6": {
+        "peso_base": 9500, 
+        "peso_max": 14000, 
+        "cons": 10.5, 
+        "vel": 320,
+        "mods": {"Padrão": 0, "Torre 20mm": 147, "Torre Ventral": 193},
+        "bombas": {"Vazio": 0, "2x SC 1000": 2180, "16x SC 50": 800}
     },
     "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500, "peso_max": 11000, "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,   
-        "armamento_fixo": "Transporte",
-        "modificacoes": {"Padrão": 0, "Torre Traseira": 130, "Carga Interna (2300kg)": 2300, "12 Paraquedistas (1200kg)": 1200},
-        "presets_bombas": {"Vazio": 0, "10x MAB 250": 2550}
+        "peso_base": 7500, 
+        "peso_max": 11000, 
+        "cons": 12.0, 
+        "vel": 240,
+        "mods": {"Padrão": 0, "Paraquedistas": 1200, "Carga Interna": 2300},
+        "bombas": {"Vazio": 0, "10x MAB 250": 2550}
     },
     "Ju-88 A-4": {
-        "peso_base_sem_combustivel": 8600, "peso_max": 14000, "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,   
-        "armamento_fixo": "1x 13mm | 4x 7.92mm",
-        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Inferior": -123},
-        "presets_bombas": {"Vazio": 0, "10x SC 50": 500, "4x SC 250": 1000, "4x SC 500": 2000}
+        "peso_base": 8600, 
+        "peso_max": 14000, 
+        "cons": 10.0, 
+        "vel": 370,
+        "mods": {"Padrão": 0, "Sem Gôndola": -123},
+        "bombas": {"Vazio": 0, "4x SC 500": 2000, "10x SC 50": 500, "28x SC 50": 1400}
     }
 }
 
