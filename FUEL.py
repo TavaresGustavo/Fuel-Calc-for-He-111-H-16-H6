@@ -681,20 +681,22 @@ with tab5:
                         st.write(f"**Altitude:** {alt}m")
                         st.write(f"**Coalizão:** {b_dados.get('Coalition')}")
 
-                    # Barra de Suprimentos (Destaque para o que você viu no print: 1/200)
-                    sup_val = b_dados.get('SupplyLevel', 0)
-                    cor_barra = "red" if sup_val < 20 else "orange" if sup_val < 50 else "green"
-                    st.markdown(f"**Estoque de Suprimentos:** {sup_val}%")
-                    st.progress(sup_val / 100)
+                   # --- Nível de Suprimentos (Barra Visual Protegida) ---
+# Pegamos o valor bruto do servidor
+raw_sup = b_dados.get('SupplyLevel', 0)
 
-                    # Hangar
-                    with st.expander("📦 Aeronaves Disponíveis no Hangar"):
-                        hangar = b_dados.get('AvailableAirframes', [])
-                        if hangar:
-                            for av in hangar:
-                                st.write(f"- {av.get('Type')}: **{av.get('NumberAvailable')}**")
-                        else:
-                            st.write("Hangar vazio ou acesso negado.")
+# Tratamento de Dados: 
+# 1. Convertemos para int
+# 2. Limitamos entre 0 e 100 (clamp) para evitar quebras no st.progress
+sup_val = max(0, min(100, int(raw_sup))) 
 
-    else:
-        st.warning("📡 Sincronize com o Combat Box para carregar o C4ISR.")
+# Determinação de cor para o feedback tático
+cor_status = "red" if sup_val < 20 else "orange" if sup_val < 50 else "green"
+
+st.markdown(f"**Estoque de Suprimentos:** :{cor_status}[{sup_val}%]")
+
+# A divisão por 100.0 agora é segura, pois sup_val nunca será > 100
+st.progress(sup_val / 100.0)
+
+if sup_val <= 0:
+    st.warning("⚠️ Atenção: Base sem recursos para rearmamento.")
