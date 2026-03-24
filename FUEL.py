@@ -237,64 +237,118 @@ with st.sidebar:
         
     painel_telemetria_ativo()
 
-    # ── PLAYER FMC GLOBAL — visível em TODAS as abas ─────────────────
-    if st.session_state.get('cronometro_rodando') and st.session_state.get('navlog_manual'):
-        _w_dir   = float(st.session_state.get('vento_dir_cb', 45.0))
-        _w_spd   = float(st.session_state.get('vento_vel_cb', 5.0) * 3.6)
-        _nav_tas = float(st.session_state.get('vel_calc', 320))
-        _pernas_sb = []
-        for _i, _ln in enumerate(st.session_state.navlog_manual):
-            try:
-                _d  = float(_ln.get("Distância (km)", 0.0))
-                _tc = float(_ln.get("Rumo (TC)", 0.0))
-                _wa = math.radians(_w_dir - _tc)
-                _swca = max(-1.0, min(1.0, (_w_spd * math.sin(_wa)) / _nav_tas))
-                _wca  = math.degrees(math.asin(_swca))
-                _th   = (_tc + _wca + 360) % 360
-                _gs   = max(1.0, (_nav_tas * math.cos(math.radians(_wca))) - (_w_spd * math.cos(_wa)))
-                _pernas_sb.append({"nome": _ln.get("Perna", f"WP{_i}"), "proa": _th,
-                                   "tempo": (_d / _gs) * 3600})
-            except: continue
+st.title("🛩️ Painel Tático C4ISR")
 
-        st.divider()
-        st.markdown("### 🚀 FMC — Em Voo")
+# ── PLAYER FMC STICKY — aparece logo abaixo do título em todas as abas ──
+if st.session_state.get('cronometro_rodando') and st.session_state.get('navlog_manual'):
 
-        @st.fragment(run_every="1s")
-        def fmc_sidebar_global():
-            _idx = st.session_state.index_perna_ativa
-            if _idx < len(_pernas_sb):
-                _p = _pernas_sb[_idx]
-                st.markdown(f"**📍 {_p['nome']}**")
-                st.markdown(f"## 🧭 {_p['proa']:.0f}°")
-                if st.session_state.tempo_inicio_perna:
-                    _passado  = time.time() - st.session_state.tempo_inicio_perna
-                    _restante = max(0, _p['tempo'] - _passado)
-                    _m, _s    = divmod(int(_restante), 60)
-                    st.metric("⏱️ Tempo WP", f"{_m:02d}:{_s:02d}")
-                    st.progress(min(1.0, _passado / max(_p['tempo'], 1)))
-                col_s1, col_s2 = st.columns(2)
-                with col_s1:
-                    if st.button("⏭️ NEXT", use_container_width=True, key="sb_next_g"):
-                        st.session_state.index_perna_ativa += 1
-                        st.session_state.tempo_inicio_perna = time.time()
-                        st.rerun()
-                with col_s2:
-                    if st.button("⏹️ STOP", use_container_width=True, key="sb_stop_g"):
-                        st.session_state.cronometro_rodando           = False
-                        st.session_state.index_perna_ativa            = 0
-                        st.session_state.tempo_inicio_missao_absoluto = None
-                        st.rerun()
-            else:
-                st.success("🏁 Objetivo Atingido!")
-                if st.button("🔄 Reset FMC", use_container_width=True, key="sb_reset_g"):
+    # Calcula pernas a partir do session_state
+    _w_dir   = float(st.session_state.get('vento_dir_cb', 45.0))
+    _w_spd   = float(st.session_state.get('vento_vel_cb', 5.0) * 3.6)
+    _nav_tas = float(st.session_state.get('vel_calc', 320))
+    _pernas_top = []
+    for _i, _ln in enumerate(st.session_state.navlog_manual):
+        try:
+            _d   = float(_ln.get("Distância (km)", 0.0))
+            _tc  = float(_ln.get("Rumo (TC)", 0.0))
+            _wa  = math.radians(_w_dir - _tc)
+            _swca = max(-1.0, min(1.0, (_w_spd * math.sin(_wa)) / _nav_tas))
+            _wca  = math.degrees(math.asin(_swca))
+            _th   = (_tc + _wca + 360) % 360
+            _gs   = max(1.0, (_nav_tas * math.cos(math.radians(_wca))) - (_w_spd * math.cos(_wa)))
+            _pernas_top.append({"nome": _ln.get("Perna", f"WP{_i}"), "proa": _th,
+                                "tempo": (_d / _gs) * 3600})
+        except: continue
+
+    # CSS: barra com borda colorida, compacta, sem scroll
+    st.markdown("""
+        <style>
+        div[data-testid="stVerticalBlock"]:has(> div > div[data-testid="stHorizontalBlock"].fmc-bar) {
+            position: sticky; top: 0; z-index: 999;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    @st.fragment(run_every="1s")
+    def fmc_top_bar():
+        _idx = st.session_state.index_perna_ativa
+        total_pernas = len(_pernas_top)
+
+        if _idx < total_pernas:
+            _p = _pernas_top[_idx]
+
+            # Calcula tempo restante
+            _restante_str = "--:--"
+            _prog = 0.0
+            if st.session_state.tempo_inicio_perna:
+                _passado  = time.time() - st.session_state.tempo_inicio_perna
+                _restante = max(0.0, _p['tempo'] - _passado)
+                _m, _s    = divmod(int(_restante), 60)
+                _restante_str = f"{_m:02d}:{_s:02d}"
+                _prog = min(1.0, _passado / max(_p['tempo'], 1))
+
+            # Layout da barra: proa grande | nome+timer | botões
+            st.markdown(f"""
+                <div style="
+                    background: linear-gradient(90deg, #1a2a1a 0%, #0e1117 100%);
+                    border: 1px solid #2a5a2a;
+                    border-left: 4px solid #44cc44;
+                    border-radius: 8px;
+                    padding: 10px 16px;
+                    margin-bottom: 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 24px;
+                ">
+                    <div style="font-size:13px; color:#888; min-width:80px;">🚀 FMC ATIVO</div>
+                    <div style="font-size:36px; font-weight:900; color:#44ff44; min-width:90px; line-height:1;">
+                        {_p['proa']:.0f}°
+                    </div>
+                    <div>
+                        <div style="font-size:13px; color:#aaa;">📍 {_p['nome']}</div>
+                        <div style="font-size:22px; font-weight:bold; color:#fff; font-family:monospace;">⏱️ {_restante_str}</div>
+                    </div>
+                    <div style="font-size:12px; color:#666; margin-left:auto;">
+                        Perna {_idx+1}/{total_pernas}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Barra de progresso da perna
+            st.progress(_prog)
+
+            # Botões em linha
+            b1, b2, b3, _spacer = st.columns([1, 1, 1, 5])
+            with b1:
+                if st.button("⏭️ NEXT", use_container_width=True, key="top_next"):
+                    st.session_state.index_perna_ativa += 1
+                    st.session_state.tempo_inicio_perna = time.time()
+                    st.rerun()
+            with b2:
+                if st.button("⏹️ STOP", use_container_width=True, key="top_stop"):
+                    st.session_state.cronometro_rodando           = False
+                    st.session_state.index_perna_ativa            = 0
+                    st.session_state.tempo_inicio_missao_absoluto = None
+                    st.rerun()
+            with b3:
+                # Mostra perna seguinte como dica
+                if _idx + 1 < total_pernas:
+                    _prox = _pernas_top[_idx + 1]
+                    st.caption(f"Próx: {_prox['proa']:.0f}°")
+        else:
+            c1, c2 = st.columns([4, 1])
+            with c1:
+                st.success("🏁 **Missão Concluída!** Objetivo Atingido.")
+            with c2:
+                if st.button("🔄 Reset", use_container_width=True, key="top_reset"):
                     st.session_state.cronometro_rodando           = False
                     st.session_state.index_perna_ativa            = 0
                     st.session_state.tempo_inicio_missao_absoluto = None
                     st.rerun()
 
-        fmc_sidebar_global()
+    fmc_top_bar()
+    st.divider()
 
-st.title("🛩️ Painel Tático C4ISR")
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog & E6B", "🚀 FMC (Ativo)", "🌐 Inteligência"])
 
 # ==========================================
