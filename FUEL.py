@@ -334,26 +334,66 @@ with tab1:
         st.caption(f"Capacidade Máxima: {av['tanque_max_l']} L")
         
 # ==========================================
-# ABA 2: LOTFE 7
+# ABA 2: MIRA DE BOMBARDEIO (LOFTE 7)
 # ==========================================
 with tab2:
-    b1, b2 = st.columns(2)
-    with b1:
-        altitude = st.number_input("Altitude (m)", value=3000)
-        ias = st.number_input("IAS (km/h)", value=280)
-        proa_alvo = st.number_input("Proa (°)", value=90)
-    with b2:
-        vel_vento = st.number_input("Vel. Vento (m/s)", value=float(st.session_state.vento_vel_cb))
-        dir_vento = st.number_input("Dir. Vento (°)", value=float(st.session_state.vento_dir_cb))
+    st.header("🎯 Calculadora de Mira (Bomb Sight)")
+    st.markdown("Cálculo de ângulo para o visor **Lofte 7** do He-111.")
 
-    tas_ms = (ias * (1 + (altitude / 1000) * 0.05)) / 3.6
-    ang_vento_rad = math.radians(dir_vento - proa_alvo)
-    try: deriva_graus = math.degrees(math.asin(max(-1.0, min(1.0, (vel_vento * math.sin(ang_vento_rad)) / tas_ms))))
-    except: deriva_graus = 0.0
-    gs_kmh = ((tas_ms * math.cos(math.radians(deriva_graus))) - (vel_vento * math.cos(ang_vento_rad))) * 3.6
+    # --- INPUTS TÉCNICOS ---
+    col_input1, col_input2 = st.columns(2)
     
-    st.metric("Insira na Lotfe: Velocidade Solo (GS)", f"{gs_kmh:.0f} km/h")
-    st.metric("Insira na Lotfe: Ângulo de Deriva", f"{abs(deriva_graus):.1f}° {'Direita' if deriva_graus > 0 else 'Esquerda'}")
+    with col_input1:
+        # Puxa o valor do FMC ou NavLog se disponível para agilizar
+        alt_voo = st.number_input("Altitude de Voo (m)", value=4000, step=100)
+        elev_alvo = st.number_input("Elevação do Alvo (m)", value=0, step=10)
+        gs_kmh = st.number_input("Velocidade de Solo (GS km/h)", value=300, step=10)
+    
+    with col_input2:
+        # V.S. é crucial se você não estiver em voo perfeitamente nivelado
+        vs_ms = st.number_input("Velocidade Vertical (m/s)", value=0.0, step=0.5, 
+                                 help="0 para voo nivelado. Use (+) para subida e (-) para descida.")
+        st.info("💡 A Ground Speed (GS) já deve considerar o efeito do vento.")
+
+    # --- CÁLCULO FÍSICO ---
+    # 1. Altitude Relativa (h)
+    h_rel = alt_voo - elev_alvo
+    g = 9.80665 # Gravidade padrão
+    
+    if h_rel > 0:
+        # 2. Conversão de GS para metros por segundo
+        v_ms = gs_kmh / 3.6
+        
+        # 3. Tempo de Queda (t) considerando velocidade vertical (Fórmula Cinética)
+        # h = (vs * t) + (0.5 * g * t^2) -> Resolvendo para t (Bhaskara)
+        # No bombardeio nivelado (vs=0), t = sqrt(2h/g)
+        termo_raiz = (vs_ms**2) + (2 * g * h_rel)
+        tempo_queda = (-vs_ms + math.sqrt(termo_raiz)) / g
+        
+        # 4. Distância Horizontal percorrida pela bomba (D)
+        distancia_horizontal = v_ms * tempo_queda
+        
+        # 5. Ângulo de Lançamento (Alpha) em graus
+        # tan(alpha) = D / h
+        angulo_rad = math.atan(distancia_horizontal / h_rel)
+        angulo_deg = math.degrees(angulo_rad)
+        
+        # --- RESULTADO FINAL ---
+        st.divider()
+        c1, c2, c3 = st.columns(3)
+        
+        with c1:
+            st.metric("ÂNGULO DA MIRA", f"{angulo_deg:.1f}°")
+        with c2:
+            st.metric("TEMPO DE QUEDA", f"{tempo_queda:.1f} s")
+        with c3:
+            st.metric("DIST. AVANÇO", f"{distancia_horizontal:.0f} m")
+
+        # Alerta de segurança tática
+        if angulo_deg > 50:
+            st.warning("⚠️ Ângulo muito alto. Reduza a velocidade ou aumente a altitude.")
+    else:
+        st.error("Altitude de voo deve ser maior que a elevação do alvo.")
 
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
