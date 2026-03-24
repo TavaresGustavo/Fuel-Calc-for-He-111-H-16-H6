@@ -334,78 +334,82 @@ with tab1:
         st.caption(f"Capacidade Máxima: {av['tanque_max_l']} L")
         
 # ==========================================
-# ABA 2: MIRA & VENTO (TOUCH OPTIMIZED)
+# ABA 2: MIRA & VENTO (ESTILO SPIFF ORIGINAL)
 # ==========================================
 with tab2:
-    # --- CSS PARA DEIXAR OS SLIDERS "GORDOS" (FACILITAR O TOUCH) ---
+    # --- CSS para Sliders Touch-Friendly (Gordos) ---
     st.markdown("""
         <style>
-            .stSlider [data-baseweb="slider"] {
-                height: 40px; /* Aumenta a área de toque da barra */
-            }
-            .stSlider [data-baseweb="thumb"] {
-                height: 35px; /* Aumenta o "botão" de arrastar */
-                width: 35px;
-                background-color: #FF4B4B;
-            }
-            .stSlider [data-testid="stTickBar"] {
-                display: none; /* Limpa o visual para focar no seletor */
-            }
+            .stSlider [data-baseweb="slider"] { height: 45px; }
+            .stSlider [data-baseweb="thumb"] { height: 40px; width: 40px; background-color: #FF4B4B; }
         </style>
     """, unsafe_allow_html=True)
 
-    st.header("🎯 Calculadora de Vento e Deriva")
-    st.caption("Ajuste os valores deslizando os seletores abaixo.")
+    st.header("🎯 Wind & Drift Calculator")
 
-    # --- INPUTS DE 3 FATORES (TOUCH READY) ---
+    # --- INPUTS (OS 4 FATORES DO ORIGINAL) ---
+    col_in1, col_in2 = st.columns(2)
     
-    # 1. Plane Heading (Rumo da Aeronave)
-    plane_hdg = st.slider("🧭 PLANE HEADING (TH °)", 0, 360, 0, step=1)
+    with col_in1:
+        phead = st.slider("🧭 PLANE HEADING (°)", 0, 360, 0, step=1)
+        whead = st.slider("🌬️ WIND DIRECTION (FROM °)", 0, 360, 0, step=1)
     
-    # 2. Wind Heading (De onde vem o vento)
-    wind_hdg = st.slider("🌬️ WIND HEADING (FROM °)", 0, 360, 0, step=1)
-    
-    # 3. Wind Speed (Velocidade do vento)
-    wind_spd = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.5)
+    with col_in2:
+        wspeed = st.slider("💨 WIND SPEED (m/s)", 0.0, 30.0, 0.0, step=0.1)
+        # Puxamos a TAS calculada na Aba 1 como padrão, mas permitimos ajuste
+        tas_input = st.slider("✈️ AIRSPEED (km/h)", 100, 500, int(st.session_state.get('vel_calc', 300)), step=5)
 
-    # --- MOTOR DE CÁLCULO (LÓGICA SPIFF) ---
-    # Precisamos da TAS da sessão para o cálculo de deriva ser preciso
-    tas_ms = (st.session_state.get('vel_calc', 300)) / 3.6 
+    # --- MOTOR DE CÁLCULO (LÓGICA EXTRAÍDA DO HTML/JS DO SPIFF) ---
+    tas_ms = tas_input / 3.6
+    # O Spiff calcula o ângulo de diferença em radianos
+    dangle = (phead - whead) * (math.pi / 180)
     
-    # Ângulo do vento em relação ao avião (Wind Angle)
-    wa_rad = math.radians(wind_hdg - plane_hdg)
+    # Velocidades laterais e frontais (Exatamente como no JS)
+    sidespeed = wspeed * math.sin(dangle)
+    headspeed = wspeed * math.cos(dangle)
     
-    # Cálculo da Deriva (WCA)
-    # sin(wca) = (Vwind * sin(wa)) / Vtas
+    # Cálculo de Deriva (Drift) e Ground Speed (GS)
     try:
-        sin_wca = (wind_spd * math.sin(wa_rad)) / tas_ms
-        wca_rad = math.asin(max(-1.0, min(1.0, sin_wca)))
-        wca_deg = math.degrees(wca_rad)
+        # drift = asin(sidespeed / tas) * 180 / PI
+        drift_rad = math.asin(sidespeed / tas_ms)
+        drift_deg = math.degrees(drift_rad)
         
-        # Cálculo da Ground Speed (GS)
-        # GS = Vtas * cos(wca) - Vwind * cos(wa)
-        gs_ms = (tas_ms * math.cos(wca_rad)) - (wind_spd * math.cos(wa_rad))
+        # gs = sqrt(tas² - sidespeed²) - headspeed
+        gs_ms = math.sqrt(tas_ms**2 - sidespeed**2) - headspeed
         gs_kmh = gs_ms * 3.6
     except:
-        wca_deg = 0.0
-        gs_kmh = tas_ms * 3.6
+        drift_deg = 0.0
+        gs_kmh = tas_input
 
-    # --- DISPLAY DE RESULTADOS (ESTILO DASHBOARD) ---
+    # --- RESULTADOS (IGUAL AO LAYOUT DA IMAGEM D507E2) ---
     st.divider()
-    res_c1, res_c2 = st.columns(2)
     
-    with res_c1:
-        st.metric("DERIVA (WCA)", f"{wca_deg:+.1f}°")
-        st.caption("Ajuste lateral na mira")
+    # Primeira Linha de Resultados: Velocidades parciais
+    res_a, res_b = st.columns(2)
+    with res_a:
+        st.metric("SIDE SPEED", f"{abs(sidespeed):.1f} m/s", 
+                  delta=f"{'Direita' if sidespeed > 0 else 'Esquerda' if sidespeed < 0 else 'Nula'}", 
+                  delta_color="off")
+    with res_b:
+        tipo_vento = "Head" if headspeed > 0 else "Tail"
+        st.metric(f"{tipo_vento.upper()} SPEED", f"{abs(headspeed):.1f} m/s")
 
-    with res_c2:
-        st.metric("VEL. SOLO (GS)", f"{gs_kmh:.0f} km/h")
-        st.caption("Velocidade real sobre o alvo")
+    # Segunda Linha de Resultados: O que vai na mira
+    res_c, res_d = st.columns(2)
+    with res_c:
+        # No simulador, você ajusta a deriva (Drift)
+        st.subheader("CALCULATED DRIFT")
+        st.markdown(f"## {drift_deg:+.1f}°")
+        
+    with res_d:
+        # A velocidade de solo real
+        st.subheader("CALCULATED GS")
+        st.markdown(f"## {gs_kmh:.0f} km/h")
 
-    # Feedback Visual de Correção
-    if abs(wca_deg) > 0.1:
-        lado = "DIREITA" if wca_deg > 0 else "ESQUERDA"
-        st.warning(f"✈️ Compensar {abs(wca_deg):.1f}° para a {lado}")
+    # Alerta de correção para o piloto
+    if abs(drift_deg) > 0.1:
+        lado_mira = "DIREITA" if drift_deg > 0 else "ESQUERDA"
+        st.info(f"💡 Gire a mira {abs(drift_deg):.1f}° para a **{lado_mira}**.")
 # ==========================================
 # ABA 3: E6B & NAVLOG HÍBRIDO (ATUALIZADA)
 # ==========================================
