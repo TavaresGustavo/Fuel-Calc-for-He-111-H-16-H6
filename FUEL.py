@@ -31,6 +31,10 @@ if 'vel_calc'            not in st.session_state: st.session_state.vel_calc     
 if 'dist_calc'           not in st.session_state: st.session_state.dist_calc           = 250.0
 if 'last_file_hash'      not in st.session_state: st.session_state.last_file_hash      = None
 if 'av_nome_selecionado' not in st.session_state: st.session_state.av_nome_selecionado = "He-111 H-16"
+if 'mission_end_time'   not in st.session_state: st.session_state.mission_end_time   = ""
+if 'mission_start_time' not in st.session_state: st.session_state.mission_start_time = ""
+if 'pilots_allied'      not in st.session_state: st.session_state.pilots_allied      = None
+if 'pilots_axis'        not in st.session_state: st.session_state.pilots_axis        = None
 
 # ==========================================
 # 1. FUNÇÕES DA API E TRADUÇÃO
@@ -56,6 +60,14 @@ def fetch_combatbox_data():
             
         dados_json = response.json()
         st.session_state.dados_campanha = dados_json 
+        
+        # Tempo de fim da missão para countdown
+        st.session_state.mission_end_time   = dados_json.get("EstimatedMissionEnd", "")
+        st.session_state.mission_start_time = dados_json.get("CampaignDayMissionStartTime", "")
+
+        # Pilotos online
+        st.session_state.pilots_allied = dados_json.get("PilotsOnStationAllied", dados_json.get("AlliedPilotsOnStation", None))
+        st.session_state.pilots_axis   = dados_json.get("PilotsOnStationAxis",   dados_json.get("AxisPilotsOnStation",   None))
         
         # --- AJUSTE DE CONVENÇÃO: HOJE ---
         weather_hoje = dados_json.get("Weather", {})
@@ -237,6 +249,85 @@ with st.sidebar:
         
     painel_telemetria_ativo()
 
+    # ── COUNTDOWN — atualiza a cada segundo ──────────────────────────
+    @st.fragment(run_every="1s")
+    def sidebar_countdown():
+        dados = st.session_state.dados_campanha
+
+        # --- PILOTOS NA ESTAÇÃO ---
+        pa = st.session_state.pilots_allied
+        px = st.session_state.pilots_axis
+        if pa is not None and px is not None:
+            total = max(pa + px, 1)
+            pct_a = pa / total
+            pct_x = px / total
+            st.markdown("**✈️ PILOTOS NO SERVER**")
+            c_a, c_x = st.columns(2)
+            with c_a:
+                st.markdown(f"<div style='text-align:center;color:#cc4444;font-size:28px;font-weight:900'>{pa}</div>"
+                            f"<div style='text-align:center;font-size:11px;color:#aaa'>ALLIES</div>",
+                            unsafe_allow_html=True)
+            with c_x:
+                st.markdown(f"<div style='text-align:center;color:#4488cc;font-size:28px;font-weight:900'>{px}</div>"
+                            f"<div style='text-align:center;font-size:11px;color:#aaa'>AXIS</div>",
+                            unsafe_allow_html=True)
+            # Barra de balanço
+            st.markdown(f"""
+                <div style='display:flex;height:18px;border-radius:4px;overflow:hidden;margin:4px 0 8px 0;'>
+                    <div style='width:{pct_a*100:.0f}%;background:#cc3333;display:flex;align-items:center;
+                                justify-content:center;font-size:11px;font-weight:bold;color:#fff;'>
+                        {pct_a*100:.0f}%
+                    </div>
+                    <div style='width:{pct_x*100:.0f}%;background:#3366bb;display:flex;align-items:center;
+                                justify-content:center;font-size:11px;font-weight:bold;color:#fff;'>
+                        {pct_x*100:.0f}%
+                    </div>
+                </div>
+                <div style='text-align:center;font-size:10px;color:#666;margin-bottom:8px;'>COALITION BALANCE</div>
+            """, unsafe_allow_html=True)
+            st.divider()
+
+        # --- MISSION COUNTDOWN ---
+        end_str = st.session_state.mission_end_time
+        if end_str:
+            try:
+                from datetime import datetime, timezone
+                # Tenta parsear o formato ISO da API
+                for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+                    try:
+                        end_dt = datetime.strptime(end_str, fmt).replace(tzinfo=timezone.utc)
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    end_dt = None
+
+                if end_dt:
+                    now_utc  = datetime.now(timezone.utc)
+                    restante = (end_dt - now_utc).total_seconds()
+                    if restante > 0:
+                        hh = int(restante // 3600)
+                        mm = int((restante % 3600) // 60)
+                        ss = int(restante % 60)
+                        # Cor muda conforme urgência
+                        cor = "#ffcc00" if restante > 1800 else ("#ff8800" if restante > 600 else "#ff3333")
+                        st.markdown("**⏰ MISSION COUNTDOWN**")
+                        st.markdown(f"""
+                            <div style='text-align:center;font-size:38px;font-weight:900;
+                                        font-family:monospace;color:{cor};
+                                        background:#111;border-radius:8px;padding:8px 4px;
+                                        border:1px solid #333;letter-spacing:3px;'>
+                                {hh:02d}:{mm:02d}:{ss:02d}
+                            </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown("**⏰ MISSION COUNTDOWN**")
+                        st.error("🔄 Servidor a reiniciar...")
+            except Exception:
+                pass
+
+    sidebar_countdown()
+
 st.title("🛩️ Painel Tático C4ISR")
 
 # ── PLAYER FMC STICKY — aparece logo abaixo do título em todas as abas ──
@@ -349,7 +440,7 @@ if st.session_state.get('cronometro_rodando') and st.session_state.get('navlog_m
     fmc_top_bar()
     st.divider()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog & E6B", "🚀 FMC (Ativo)", "🌐 Inteligência"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Hangar", "🎯 Lotfe 7", "🧮 NavLog & E6B", "🚀 FMC (Ativo)", "🌐 Inteligência", "🗺️ Mapa"])
 
 # ==========================================
 # ABA 1: HANGAR (LOGÍSTICA E PREPARAÇÃO)
@@ -843,3 +934,33 @@ with tab5:
             for o in axis_o:
                 st.markdown(f":red[🎯 **{o.get('Name')}**]")
                 st.caption(traduzir_texto(o.get('Description', '')))
+# ==========================================
+# ABA 6: MAPA TÁTICO (IL-2 MISSION PLANNER)
+# ==========================================
+with tab6:
+    st.header("🗺️ Mapa Tático — Combat Box Rhineland")
+    st.caption("Mapa ao vivo do servidor Combat Box com linha de frente, bases e objetivos.")
+
+    MAP_URL = (
+        "https://serverror.github.io/IL2-Mission-Planner/"
+        "#json-url=https://campaign-data.combatbox.net/"
+        "rhineland-campaign/rhineland-campaign-mission-planner-latest.json.aspx"
+    )
+
+    # Botão para abrir em nova aba (caso o iframe não carregue)
+    col_map_btn, col_map_info = st.columns([1, 4])
+    with col_map_btn:
+        st.link_button("🔗 Abrir em nova aba", MAP_URL)
+    with col_map_info:
+        st.caption("O mapa mostra a linha de frente ao vivo, bases ativas, objetivos e o plano de voo carregado.")
+
+    # iframe em tela cheia
+    st.markdown(f"""
+        <iframe
+            src="{MAP_URL}"
+            width="100%"
+            height="820"
+            style="border:1px solid #333; border-radius:8px;"
+            allow="fullscreen"
+        ></iframe>
+    """, unsafe_allow_html=True)
