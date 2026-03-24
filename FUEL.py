@@ -94,22 +94,16 @@ def fetch_combatbox_data():
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
 
 def calcular_rumo_e_distancia(p1, p2):
-    # No IL-2 Mission Planner (Rheinland), o sistema de coordenadas funciona assim:
+    # No IL-2 Mission Planner (Rheinland), o sistema de coordenadas:
     # lat cresce para NORTE (menos negativo = mais norte)
     # lng cresce para LESTE
-    # Fórmula correta: atan2(dlng, dlat) — Norte = dlat+, Leste = dlng+
-
-    dlng = p2['lng'] - p1['lng']   # Componente Leste (+) / Oeste (-)
-    dlat = p2['lat'] - p1['lat']   # Componente Norte (+) / Sul (-)
-
-    # Bearing a partir do Norte (0=N, 90=E, 180=S, 270=W)
+    # Fórmula: atan2(dlng, dlat) — Norte = dlat+, Leste = dlng+
+    dlng = p2['lng'] - p1['lng']
+    dlat = p2['lat'] - p1['lat']
     rumo_rad = math.atan2(dlng, dlat)
     rumo_final = (math.degrees(rumo_rad) + 360) % 360
-
-    # Distancia: 1 grau = ~111.12 km no mapa Rheinland
-    dist_raw = math.sqrt(dlng**2 + dlat**2)
-    distancia_km = dist_raw * 111.12
-
+    # 1 grau = ~111.12 km no mapa Rheinland
+    distancia_km = math.sqrt(dlng**2 + dlat**2) * 3.872  # 3.872 km/grau calibrado para mapa Rheinland
     return rumo_final, distancia_km
 
 # ==========================================
@@ -268,34 +262,37 @@ with tab1:
                 try:
                     dados_plano = json.loads(file_content)
                     if "routes" in dados_plano:
-                        # Prioridade: rota marcada como isFlightPlan
-                        plano = next((r for r in dados_plano["routes"] if r.get("isFlightPlan")), dados_plano["routes"][0])
-                        coords  = plano["latLngs"]
-                        speeds  = plano.get("speeds", [])
-                        altitudes = plano.get("altitudes", [])
-                        nome_rota = plano.get("name", "Rota")
-                        navlog_temp = []
-                        dist_total = 0.0
-                        for i in range(len(coords) - 1):
-                            rumo, dist = calcular_rumo_e_distancia(coords[i], coords[i+1])
-                            dist_total += dist
-                            vel_p = speeds[i] if i < len(speeds) else int(plano.get("speed", 330))
-                            alt_p = altitudes[i+1] if i+1 < len(altitudes) else int(plano.get("altitude", 2000))
-                            navlog_temp.append({
-                                "Perna": f"WP {i} -> WP {i+1}",
-                                "Distância (km)": round(dist, 1),
-                                "Rumo (TC)": round(rumo, 0),
-                                "TAS (km/h)": int(vel_p),
-                                "Altitude (m)": int(alt_p)
-                            })
-                        st.session_state.navlog_manual = navlog_temp
-                        st.session_state.dist_calc = dist_total
-                        if navlog_temp:
-                            st.session_state.vel_calc = float(navlog_temp[0]["TAS (km/h)"])
+                        # SEMPRE usa a rota com isFlightPlan=true (não routes[0] que pode ser linha de frente)
+                        plano = next((r for r in dados_plano["routes"] if r.get("isFlightPlan")), None)
+                        if plano is None:
+                            st.error("❌ Nenhuma rota de plano de voo encontrada. Certifique-se de que uma rota está marcada como 'Flight Plan' no planner.")
+                        else:
+                            coords    = plano["latLngs"]
+                            speeds    = plano.get("speeds", [])
+                            altitudes = plano.get("altitudes", [])
+                            navlog_temp = []
+                            dist_total  = 0.0
+                            for i in range(len(coords) - 1):
+                                rumo, dist = calcular_rumo_e_distancia(coords[i], coords[i+1])
+                                dist_total += dist
+                                vel_p = int(speeds[i]) if i < len(speeds) else int(plano.get("speed", 330))
+                                alt_p = int(altitudes[i+1]) if i+1 < len(altitudes) else int(plano.get("altitude", 2000))
+                                navlog_temp.append({
+                                    "Perna": f"WP {i} -> WP {i+1}",
+                                    "Distância (km)": round(dist, 1),
+                                    "Rumo (TC)": round(rumo, 0),
+                                    "TAS (km/h)": vel_p,
+                                    "Altitude (m)": alt_p
+                                })
+                            st.session_state.navlog_manual = navlog_temp
+                            st.session_state.dist_calc     = dist_total
+                            if navlog_temp:
+                                st.session_state.vel_calc = float(navlog_temp[0]["TAS (km/h)"])
+                            st.success(f"✅ {len(navlog_temp)} pernas extraídas de '{plano.get('name','Rota')}' e enviadas ao NavLog!")
                     else:
                         st.session_state.navlog_manual = dados_plano
                         st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
-                    st.success(f"✅ {len(st.session_state.navlog_manual)} pernas extraídas e enviadas ao NavLog!")
+                        st.success("✅ Rota carregada com sucesso!")
                 except Exception as e:
                     st.error(f"Erro ao processar o arquivo JSON: {e}")
             
