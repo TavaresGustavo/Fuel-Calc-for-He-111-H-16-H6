@@ -997,21 +997,15 @@ with tab6:
         unsafe_allow_html=True
     )
 
-    # CSS na página pai: bloqueia scroll + remove padding lateral do container
+    # Apenas remove padding lateral para o mapa ocupar toda a largura
+    # NÃO bloqueia overflow globalmente (quebraria scroll das outras abas)
     st.markdown("""
         <style>
-        html, body, [data-testid="stApp"],
-        [data-testid="stMain"],
-        [data-testid="stMainBlockContainer"] {
-            overflow: hidden !important;
-        }
-        /* Remove padding lateral apenas na aba do mapa */
-        [data-testid="stMainBlockContainer"] {
+        .map-tab-active [data-testid="stMainBlockContainer"] {
             padding-left:  0 !important;
             padding-right: 0 !important;
             padding-bottom: 0 !important;
         }
-        /* Remove margem do bloco do components.html */
         iframe[title="components.v1.html"] {
             display: block !important;
             margin: 0 !important;
@@ -1058,40 +1052,79 @@ with tab6:
             var overlay  = document.getElementById('overlay');
             var dragging = false;
 
-            function lockParentScroll() {{
+            // Remove padding lateral do container pai para o mapa encostar nas bordas
+            try {{
+                var parentDoc = window.parent.document;
+                var container = parentDoc.querySelector('[data-testid="stMainBlockContainer"]');
+                if (container) {{
+                    container.style.paddingLeft   = '0';
+                    container.style.paddingRight  = '0';
+                    container.style.paddingBottom = '0';
+                }}
+            }} catch(e) {{}}
+
+            // Quando o componente for desmontado (troca de aba), restaura scroll e padding
+            function restoreParent() {{
                 try {{
-                    // Trava scroll da página pai do Streamlit
+                    window.parent.document.documentElement.style.overflow = '';
+                    window.parent.document.body.style.overflow = '';
+                    var container = window.parent.document.querySelector('[data-testid="stMainBlockContainer"]');
+                    if (container) {{
+                        container.style.paddingLeft   = '';
+                        container.style.paddingRight  = '';
+                        container.style.paddingBottom = '';
+                    }}
+                }} catch(e) {{}}
+            }}
+            window.addEventListener('beforeunload', restoreParent);
+            // MutationObserver: detecta remoção do iframe do DOM pai
+            try {{
+                var myIframe = window.frameElement;
+                if (myIframe) {{
+                    new MutationObserver(function() {{
+                        if (!window.parent.document.contains(myIframe)) {{
+                            restoreParent();
+                        }}
+                    }}).observe(window.parent.document.body, {{childList: true, subtree: true}});
+                }}
+            }} catch(e) {{}}
+
+            function lockScroll() {{
+                try {{
                     window.parent.document.documentElement.style.overflow = 'hidden';
                     window.parent.document.body.style.overflow = 'hidden';
                     window.parent.scrollTo(0, 0);
                 }} catch(e) {{}}
             }}
 
+            function unlockScroll() {{
+                try {{
+                    window.parent.document.documentElement.style.overflow = 'hidden';
+                    window.parent.document.body.style.overflow = 'hidden';
+                }} catch(e) {{}}
+            }}
+
             document.getElementById('wrap').addEventListener('mousedown', function() {{
                 dragging = true;
                 overlay.style.display = 'block';
-                lockParentScroll();
+                lockScroll();
             }});
 
             window.addEventListener('mouseup', function() {{
                 if (dragging) {{
                     dragging = false;
                     overlay.style.display = 'none';
-                    lockParentScroll();
+                    unlockScroll();
                 }}
             }});
 
-            // Trava contínua: qualquer scroll da página pai é cancelado
+            // Durante drag: se mouse sair do componente, mantém o lock
             window.parent.addEventListener('scroll', function() {{
-                window.parent.scrollTo(0, 0);
+                if (dragging) window.parent.scrollTo(0, 0);
             }}, true);
 
-            // Previne scroll da página pai via roda do mouse sobre o iframe
-            window.parent.document.addEventListener('wheel', function(e) {{
-                e.preventDefault();
-            }}, {{ passive: false, capture: true }});
-
-            lockParentScroll();
+            // Bloqueia scroll inicial ao carregar o mapa
+            lockScroll();
         }})();
         </script>
         """,
