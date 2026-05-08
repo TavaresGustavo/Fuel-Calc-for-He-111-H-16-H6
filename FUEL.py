@@ -392,6 +392,209 @@ db_avioes = {
         "modificacoes": {"Padrão": 0},
         "presets_bombas": {"Vazio": 0, "8x FAB-100 (800kg)": 800, "4x FAB-250 (1000kg)": 1000}
     },
+    # ── RHINELAND (1944-45 — caças e bombardeiros) ──────────────────
+
+    # ── RHINELAND 1944-45 (do TAW) ──────────────────────────────────
+    "Bf 109 G-6": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 2673, "peso_max": 3400,
+        "consumo_l_min": 5.2,          # Cruzeiro a 2000m (Combat: 8.6 L/min)
+        "vel_cruzeiro_padrao": 480, "tanque_max_l": 400,
+        "climb_rate_default": 13.0, "descent_rate_default": 15.0,
+        "armamento_fixo": "2x 13mm MG-131 nariz (300 rds, 20s) | 1x 20mm MG-151/20 hub (200 rds, 16s)",
+        "modificacoes": {
+            "1x 30mm MK-108 hub (65 rds, 6s) + 2x 20mm MG-151/20 asas (135 rds)": 120,
+            "2x 20mm MG-151/20 gondola (asas)": 120,
+            "Sem Rádio FuG 16ZY": -20,
+            "Tanque Auxiliar 300L": 240,
+        },
+        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
+    },
+    "Bf 109 G-14": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 2795, "peso_max": 3565,
+        "consumo_l_min": 5.2,          # Cruzeiro a 2000m (Combat: 9.4 L/min)
+        "vel_cruzeiro_padrao": 546, "tanque_max_l": 400,
+        "climb_rate_default": 23.0, "descent_rate_default": 15.0,
+        "armamento_fixo": "2x 13mm MG-131 nariz (300 rds, 20s) | 1x 20mm MG-151/20 hub (200 rds, 16s)",
+        "modificacoes": {
+            "1x 30mm MK-108 hub (65 rds, 6s) + 2x 20mm MG-151/20 asas (135 rds)": 120,
+            "2x 20mm MG-151/20 gondola (asas)": 120,
+            "Sem Rádio": -20,
+            "Tanque Auxiliar 300L": 240,
+        },
+        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
+    },
+    "Bf 109 K-4": {
+        "campanha": "Rhineland",
+        # Standard Weight 3361 kg | Max Weight 3891 kg | Tanque 400L (3361 - 400×0.72 = 3073 base)
+        "peso_base_sem_combustivel": 3073, "peso_max": 3891,
+        "consumo_l_min": 5.2,          # Cruzeiro (Combat: ~9.4 L/min, MW-50 Emergency: ~12 L/min)
+        "vel_cruzeiro_padrao": 581,     # Max IAS a 3000m
+        "tanque_max_l": 400,
+        "climb_rate_default": 24.4, "descent_rate_default": 16.0,
+        "armamento_fixo": "2x 13mm MG-131 nariz (300 rds, 20s) | 1x 30mm MK-108 hub (65 rds, 6s)",
+        "modificacoes": {
+            "2x 20mm MG-151/20 gun pods asas (135 rds, +212 kg)": 212,
+            "DB 605 DC engine": 0,
+            "Sem Rádio": -20,
+            "Tanque Auxiliar 300L": 240,
+        },
+        "presets_bombas": {
+            "Vazio": 0,
+            "1x SC 250 (+279 kg total)": 279,
+            "1x SC 500 (+530 kg total)": 530,
+        }
+    },
+    "Fw 190 A-6": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 3205, "peso_max": 4900,
+        "consumo_l_min": 6.0, "vel_cruzeiro_padrao": 510, "tanque_max_l": 524,
+        "climb_rate_default": 10.0, "descent_rate_default": 13.0,
+        "armamento_fixo": "4x 20mm MG151/20 (asa+raiz) | 2x 13mm MG131",
+        "modificacoes": {"Padrão": 0, "ETC 501 (bomba)": 30, "Sem blindagem piloto": -50},
+        "presets_bombas": {"Vazio": 0, "1x SC 250": 250, "1x SC 500": 500}
+    },
+    "Fw 190 A-8": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 3931, "peso_max": 5239,
+        "consumo_l_min": 6.5, "vel_cruzeiro_padrao": 523, "tanque_max_l": 639,
+        "climb_rate_default": 15.6, "descent_rate_default": 13.0,
+        "armamento_fixo": "2x 13mm MG-131 (nariz, 475 rds) | 2x 20mm MG-151/20 (asas, 250 rds)",
+        "modificacoes": {
+            "Padrão": 0,
+            "30mm MK-108 guns (2x asas, 55 rds)": 120,
+            "21cm BR Rockets (2x)": 180,
+            "Sturmjäger (blindagem extra)": 95,
+            "ETC 501 Centerline Bomb Rack": 30,
+            "Remoção MG-131 (-peso)": -40,
+        },
+        "presets_bombas": {"Vazio": 0, "4x SD 70 (280kg)": 280, "3x SC 250 (750kg)": 750, "1x SC 500 (500kg)": 500}
+    },
+    "Fw 190 D-9": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 3490, "peso_max": 4840,
+        "consumo_l_min": 6.8, "vel_cruzeiro_padrao": 580, "tanque_max_l": 524,
+        "climb_rate_default": 11.0, "descent_rate_default": 14.0,
+        "armamento_fixo": "2x 20mm MG151/20 (asa) | 2x 13mm MG131",
+        "modificacoes": {"Padrão": 0, "ETC 504 (bomba)": 30, "Sem Rádio": -20},
+        "presets_bombas": {"Vazio": 0, "1x SC 250": 250, "1x SC 500": 500}
+    },
+    "Ju 88 A-4": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 8600, "peso_max": 14000,
+        "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,
+        "climb_rate_default": 3.5, "descent_rate_default": 5.0,
+        "armamento_fixo": "1x 13mm MG131 frontal | 3x 7.92mm MG81J",
+        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Ventral": -123, "Câmera Recon Rb 50/30": 25},
+        "presets_bombas": {"Vazio": 0,
+                           "4x SC 250 (1000kg)": 1000,
+                           "2x SC 500 (1000kg)": 1000,
+                           "4x SC 500 (2000kg)": 2000,
+                           "2x SC 1000 Hermann (2180kg)": 2180,
+                           "10x SC 50 interno (500kg)": 500,
+                           "28x SC 50 full load (1400kg)": 1400}
+    },
+    "Me 262 A-1a": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 4000, "peso_max": 7130,
+        "consumo_l_min": 18.0, "vel_cruzeiro_padrao": 750, "tanque_max_l": 1900,
+        "climb_rate_default": 15.0, "descent_rate_default": 18.0,
+        "armamento_fixo": "4x 30mm MK108",
+        "modificacoes": {"Padrão": 0, "24x R4M Rockets": 120},
+        "presets_bombas": {"Vazio": 0, "2x SC 250": 500}
+    },
+    "Me 262 A-2a": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 4000, "peso_max": 7130,
+        "consumo_l_min": 18.0, "vel_cruzeiro_padrao": 700, "tanque_max_l": 1900,
+        "climb_rate_default": 13.0, "descent_rate_default": 16.0,
+        "armamento_fixo": "2x 30mm MK108 (sem canhões dianteiros)",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0, "2x SC 250 (500kg)": 500, "2x SC 500 (1000kg)": 1000}
+    },
+    "Spitfire Mk.IXe": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 2950, "peso_max": 3900,
+        "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 480, "tanque_max_l": 386,
+        "climb_rate_default": 12.0, "descent_rate_default": 15.0,
+        "armamento_fixo": "2x 20mm Hispano Mk.II | 4x .303 Browning",
+        "modificacoes": {"Padrão": 0, "Tanque Ferry 170L": 136, "Mirror + Landing Lights": 5},
+        "presets_bombas": {"Vazio": 0, "1x 500lb GP": 227, "2x 250lb GP": 227}
+    },
+    "Spitfire Mk.XIVe": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 3100, "peso_max": 4200,
+        "consumo_l_min": 5.5, "vel_cruzeiro_padrao": 540, "tanque_max_l": 386,
+        "climb_rate_default": 14.0, "descent_rate_default": 16.0,
+        "armamento_fixo": "2x 20mm Hispano Mk.II | 4x .303 Browning",
+        "modificacoes": {"Padrão": 0, "Tanque Ferry": 136},
+        "presets_bombas": {"Vazio": 0, "1x 500lb GP": 227}
+    },
+    "P-47D-28": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 5490, "peso_max": 7260,
+        "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 560, "tanque_max_l": 1060,
+        "climb_rate_default": 8.5, "descent_rate_default": 12.0,
+        "armamento_fixo": "8x .50 cal M2 Browning",
+        "modificacoes": {"Padrão": 0, "Tanque Ventral 200gal": 560, "Sem Tanque Ventral": 0},
+        "presets_bombas": {"Vazio": 0, "2x 500lb": 454, "2x 1000lb": 907,
+                           "1x 500lb + 2x 250lb": 340, "10x HVAR": 600, "3x 500lb": 680}
+    },
+    "P-51D-15": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 3465, "peso_max": 5490,
+        "consumo_l_min": 6.2, "vel_cruzeiro_padrao": 590, "tanque_max_l": 696,
+        "climb_rate_default": 10.0, "descent_rate_default": 14.0,
+        "armamento_fixo": "6x .50 cal M2 Browning",
+        "modificacoes": {"Padrão": 0, "2x Tanques Externos 75gal": 363},
+        "presets_bombas": {"Vazio": 0, "2x 500lb": 454, "2x 1000lb": 907}
+    },
+    "Typhoon Mk.Ib": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 4445, "peso_max": 6010,
+        "consumo_l_min": 9.0, "vel_cruzeiro_padrao": 520, "tanque_max_l": 496,
+        "climb_rate_default": 9.0, "descent_rate_default": 13.0,
+        "armamento_fixo": "4x 20mm Hispano Mk.II",
+        "modificacoes": {"Padrão": 0, "Tanque de Fuselagem": 204},
+        "presets_bombas": {"Vazio": 0, "2x 500lb GP": 454, "2x 1000lb GP": 907,
+                           "8x RP-3 60lb": 432, "4x RP-3 + 2x 500lb": 681}
+    },
+    "Tempest Mk.V ser.2": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 4354, "peso_max": 5940,
+        "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 570, "tanque_max_l": 682,
+        "climb_rate_default": 11.0, "descent_rate_default": 14.0,
+        "armamento_fixo": "4x 20mm Hispano Mk.V",
+        "modificacoes": {"Padrão": 0, "Tanque Ferry": 182},
+        "presets_bombas": {"Vazio": 0, "2x 500lb GP": 454, "2x 1000lb GP": 907}
+    },
+    "B-25D Mitchell": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 8836, "peso_max": 14062,
+        "consumo_l_min": 15.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 3028,
+        "climb_rate_default": 4.0, "descent_rate_default": 6.0,
+        "armamento_fixo": "4x .50 cal frontal | 2x .50 cal dorsal | 2x .50 cal waist | 1x .50 cal ventral",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0,
+                           "12x 250lb (1361kg)": 1361,
+                           "8x 500lb (1814kg)": 1814,
+                           "4x 500lb + 4x 250lb": 1361,
+                           "6x 500lb (2722kg)": 1361}
+    },
+    "A-20G Havoc": {
+        "campanha": "Rhineland",
+        "peso_base_sem_combustivel": 7700, "peso_max": 11000,
+        "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
+        "climb_rate_default": 5.5, "descent_rate_default": 8.0,
+        "armamento_fixo": "4x .50 cal M2 frontal | 2x .50 cal dorsal | 1x .50 cal ventral",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0,
+                           "8x 250lb (907kg)": 907,
+                           "4x 500lb (907kg)": 907,
+                           "2x 500lb + 4x 250lb": 680}
+    },
+
 }
 
 def get_avioes_campanha():
