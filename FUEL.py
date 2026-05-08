@@ -223,7 +223,8 @@ db_avioes = {
     "He-111 H-16": {
         # Standard Weight 13017 kg | Max Weight 15689 kg | tanque ~3450L
         "peso_base_sem_combustivel": 10533, "peso_max": 15689,
-        "consumo_l_min": 24.0,   # 24.0 L/min total (12 L/min × 2 motores) "vel_cruzeiro_padrao": 352, "tanque_max_l": 3450,
+        "consumo_l_min": 24.0,
+        "vel_cruzeiro_padrao": 352, "tanque_max_l": 3450,
         "climb_rate_default": 5.0, "descent_rate_default": 4.0,
         "armamento_fixo": "4x 7.92mm MG-15 | 1x 20mm MG/FF nariz | 1x 13mm MG-131 topo",
         "campanha": "ambas",
@@ -240,7 +241,8 @@ db_avioes = {
     },
     "He-111 H-6": {
         "peso_base_sem_combustivel": 10642,  "peso_max": 15239,
-        "consumo_l_min": 24.0,   # 24.0 L/min total (12 L/min × 2 motores) "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
+        "consumo_l_min": 24.0,
+        "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
         "climb_rate_default": 2.5,  "descent_rate_default": 4.0,
         "armamento_fixo": "6x 7.92mm MG-15",
         "campanha": "ambas",
@@ -253,7 +255,8 @@ db_avioes = {
         # Margem de carga: 11333 - 10003 = 1330 kg
         # Cargas pesadas (MAB 250, 2300kg) requerem tanque parcial no jogo
         "peso_base_sem_combustivel": 8995, "peso_max": 11333,
-        "consumo_l_min": 20.0,   # 20.0 L/min total (10 L/min × 2 motores) "vel_cruzeiro_padrao": 229, "tanque_max_l": 1400,
+        "consumo_l_min": 20.0,
+        "vel_cruzeiro_padrao": 229, "tanque_max_l": 1400,
         "climb_rate_default": 2.6, "descent_rate_default": 3.5,
         "armamento_fixo": "1x 7.92mm MG-15 torreta dorsal (1125 rds)",
         "campanha": "ambas",
@@ -310,7 +313,8 @@ db_avioes = {
     "Bf 110 G-2": {
         # Standard Weight 7514 kg | Max Weight 8928 kg | tanque ~1270L
         "peso_base_sem_combustivel": 6599, "peso_max": 8928,
-        "consumo_l_min": 16.0,   # 16.0 L/min total (8 L/min × 2 motores) "vel_cruzeiro_padrao": 491, "tanque_max_l": 1270,
+        "consumo_l_min": 16.0,
+        "vel_cruzeiro_padrao": 491, "tanque_max_l": 1270,
         "climb_rate_default": 17.2, "descent_rate_default": 12.0,
         "armamento_fixo": "4x 7.92mm MG-17 nariz (1000 rds, 50s) | 2x 20mm MG-151/20 nariz (375 rds, 32s) | 2x 7.92mm MG-81 traseiro (750 rds)",
         "campanha": "ambas",
@@ -327,7 +331,8 @@ db_avioes = {
     },
     "Ju 87 D-5": {
         "peso_base_sem_combustivel": 4230,  "peso_max": 6684,
-        "consumo_l_min": 8.5,   # 8.5 L/min total (4 L/min × 2 motores) "vel_cruzeiro_padrao": 300, "tanque_max_l": 840,
+        "consumo_l_min": 8.5,
+        "vel_cruzeiro_padrao": 300, "tanque_max_l": 840,
         "climb_rate_default": 4.0,  "descent_rate_default": 8.0,
         "armamento_fixo": "2x 20mm MG-151/20 (asas) | 1x 7.92mm MG-81Z dorsal",
         "campanha": "ambas",
@@ -396,7 +401,8 @@ db_avioes = {
     },
     "Pe-2 ser.87": {
         "peso_base_sem_combustivel": 6617,  "peso_max": 8701,
-        "consumo_l_min": 14.0,   # 14.0 L/min total (7 L/min × 2 motores) "vel_cruzeiro_padrao": 440, "tanque_max_l": 1400,
+        "consumo_l_min": 14.0,
+        "vel_cruzeiro_padrao": 440, "tanque_max_l": 1400,
         "climb_rate_default": 6.0,  "descent_rate_default": 9.0,
         "armamento_fixo": "2x 7.62mm ShKAS nariz | 12.7mm UBT dorsal | 12.7mm UBT ventral",
         "campanha": "ambas",
@@ -406,7 +412,8 @@ db_avioes = {
     },
     "A-20G Havoc (VVS)": {
         "peso_base_sem_combustivel": 7700,  "peso_max": 11000,
-        "consumo_l_min": 18.0,   # 18.0 L/min total (9 L/min × 2 motores) "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
+        "consumo_l_min": 18.0,
+        "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
         "climb_rate_default": 5.5,  "descent_rate_default": 8.0,
         "armamento_fixo": "4x 12.7mm UBK frontal | 2x 12.7mm UBT dorsal | 12.7mm UBT ventral",
         "campanha": "ambas",
@@ -505,7 +512,8 @@ db_avioes = {
     "Ju 88 A-4": {
         "campanha": "ambas",
         "peso_base_sem_combustivel": 8600, "peso_max": 14000,
-        "consumo_l_min": 22.0,   # 22.0 L/min total (11 L/min × 2 motores) "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,
+        "consumo_l_min": 22.0,
+        "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,
         "climb_rate_default": 3.5, "descent_rate_default": 5.0,
         "armamento_fixo": "1x 13mm MG131 frontal | 3x 7.92mm MG81J",
         "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Ventral": -123, "Câmera Recon Rb 50/30": 25},
@@ -520,7 +528,8 @@ db_avioes = {
     "Me 262 A-1a": {
         "campanha": "ambas",
         "peso_base_sem_combustivel": 4000, "peso_max": 7130,
-        "consumo_l_min": 32.0,   # 32.0 L/min total (16 L/min × 2 motores) "vel_cruzeiro_padrao": 750, "tanque_max_l": 1900,
+        "consumo_l_min": 32.0,
+        "vel_cruzeiro_padrao": 750, "tanque_max_l": 1900,
         "climb_rate_default": 15.0, "descent_rate_default": 18.0,
         "armamento_fixo": "4x 30mm MK108",
         "modificacoes": {"Padrão": 0, "24x R4M Rockets": 120},
@@ -529,7 +538,8 @@ db_avioes = {
     "Me 262 A-2a": {
         "campanha": "ambas",
         "peso_base_sem_combustivel": 4000, "peso_max": 7130,
-        "consumo_l_min": 32.0,   # 32.0 L/min total (16 L/min × 2 motores) "vel_cruzeiro_padrao": 700, "tanque_max_l": 1900,
+        "consumo_l_min": 32.0,
+        "vel_cruzeiro_padrao": 700, "tanque_max_l": 1900,
         "climb_rate_default": 13.0, "descent_rate_default": 16.0,
         "armamento_fixo": "2x 30mm MK108 (sem canhões dianteiros)",
         "modificacoes": {"Padrão": 0},
@@ -594,7 +604,8 @@ db_avioes = {
     "B-25D Mitchell": {
         "campanha": "ambas",
         "peso_base_sem_combustivel": 8836, "peso_max": 14062,
-        "consumo_l_min": 28.0,   # 28.0 L/min total (14 L/min × 2 motores) "vel_cruzeiro_padrao": 370, "tanque_max_l": 3028,
+        "consumo_l_min": 28.0,
+        "vel_cruzeiro_padrao": 370, "tanque_max_l": 3028,
         "climb_rate_default": 4.0, "descent_rate_default": 6.0,
         "armamento_fixo": "4x .50 cal frontal | 2x .50 cal dorsal | 2x .50 cal waist | 1x .50 cal ventral",
         "modificacoes": {"Padrão": 0},
@@ -607,7 +618,8 @@ db_avioes = {
     "A-20G Havoc": {
         "campanha": "ambas",
         "peso_base_sem_combustivel": 7700, "peso_max": 11000,
-        "consumo_l_min": 18.0,   # 18.0 L/min total (9 L/min × 2 motores) "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
+        "consumo_l_min": 18.0,
+        "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
         "climb_rate_default": 5.5, "descent_rate_default": 8.0,
         "armamento_fixo": "4x .50 cal M2 frontal | 2x .50 cal dorsal | 1x .50 cal ventral",
         "modificacoes": {"Padrão": 0},
