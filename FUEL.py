@@ -250,17 +250,7 @@ db_avioes = {
                          "Carga Interna Tática": 2300, "Rodas de Inverno": 45},
         "presets_bombas": {"Vazio": 0, "10x MAB 250 (Containers)": 2550, "12x SC 50": 600}
     },
-    "Ju-88 A-4": {
-        "peso_base_sem_combustivel": 8600,  "peso_max": 14000,
-        "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,
-        "climb_rate_default": 3.5,  "descent_rate_default": 5.0,
-        "armamento_fixo": "1x 13mm MG-131 | 3x 7.92mm MG-81J",
-        "campanha": "Rhineland",
-        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Inferior": -123,
-                         "Câmera de Reconhecimento": 25},
-        "presets_bombas": {"Vazio": 0, "4x SC 500": 2000, "10x SC 50 (Interno)": 500,
-                           "28x SC 50 (Full Load)": 1400, "2x SC 1000": 2180}
-    },
+
     # ── KUBAN (1943 — Eixo) ───────────────────────────────────────────
     "Bf 109 G-4": {
         "peso_base_sem_combustivel": 2558,  "peso_max": 3200,
@@ -272,17 +262,7 @@ db_avioes = {
                          "Tanque Auxiliar 300L": 240},
         "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
     },
-    "Bf 109 G-6 (Kuban)": {
-        "peso_base_sem_combustivel": 2673,  "peso_max": 3400,
-        "consumo_l_min": 5.2, "vel_cruzeiro_padrao": 480, "tanque_max_l": 400,
-        "climb_rate_default": 13.0, "descent_rate_default": 15.0,
-        "armamento_fixo": "2x 13mm MG-131 nariz (300 rds) | 1x 20mm MG-151/20 hub (200 rds)",
-        "campanha": "Kuban",
-        "modificacoes": {"1x 30mm MK-108 hub + 2x 20mm MG-151/20 asas (135 rds)": 120,
-                         "2x 20mm MG-151/20 gondola (asas)": 120,
-                         "Sem Rádio FuG 16ZY": -20, "Tanque Auxiliar 300L": 240},
-        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
-    },
+
     "Fw 190 A-5": {
         "peso_base_sem_combustivel": 3150,  "peso_max": 4800,
         "consumo_l_min": 6.2, "vel_cruzeiro_padrao": 530, "tanque_max_l": 524,
@@ -396,7 +376,7 @@ db_avioes = {
 
     # ── RHINELAND 1944-45 (do TAW) ──────────────────────────────────
     "Bf 109 G-6": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 2673, "peso_max": 3400,
         "consumo_l_min": 5.2,          # Cruzeiro a 2000m (Combat: 8.6 L/min)
         "vel_cruzeiro_padrao": 480, "tanque_max_l": 400,
@@ -481,7 +461,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "1x SC 250": 250, "1x SC 500": 500}
     },
     "Ju 88 A-4": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 8600, "peso_max": 14000,
         "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,
         "climb_rate_default": 3.5, "descent_rate_default": 5.0,
@@ -598,9 +578,10 @@ db_avioes = {
 }
 
 def get_avioes_campanha():
-    """Retorna aviões filtrados pela campanha ativa (ou todos se não filtrado)."""
+    """Retorna aviões filtrados pela campanha ativa. 'ambas' aparece em qualquer campanha."""
     camp = st.session_state.get('campanha_ativa', 'Kuban')
-    return {k: v for k, v in db_avioes.items() if v.get('campanha', camp) == camp}
+    return {k: v for k, v in db_avioes.items()
+            if v.get('campanha', camp) in (camp, 'ambas')}
 
 
 
