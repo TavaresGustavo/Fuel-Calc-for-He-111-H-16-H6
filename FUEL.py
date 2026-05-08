@@ -1009,28 +1009,37 @@ with tab1:
         margem_seg = st.slider("Reserva de Combustível (%)", 0, 100, 30)
     
     with c2:
-        mod_sel = st.selectbox("Modificações", list(av['modificacoes'].keys()))
-        bomb_sel = st.selectbox("Carga de Bombas", list(av['presets_bombas'].keys()))
+        mods_disponiveis = {k: v for k, v in av.get('modificacoes', {}).items()}
+        mod_sel  = st.selectbox("Modificações", list(mods_disponiveis.keys()) or ["Padrão"])
+        bomb_sel = st.selectbox("Carga de Bombas", list(av.get('presets_bombas', {"Vazio": 0}).keys()))
         st.caption(f"🛡️ Armamento Fixo: {av.get('armamento_fixo', 'Não listado')}")
-        
+
     # --- Cálculos Logísticos ---
+    peso_mod   = av.get('modificacoes', {}).get(mod_sel, 0)
+    peso_bomb  = av.get('presets_bombas', {}).get(bomb_sel, 0)
+    tanque     = av.get('tanque_max_l', 1)
+    consumo    = av.get('consumo_l_min', 1)
+    base_peso  = av.get('peso_base_sem_combustivel', 0)
+    peso_max   = av.get('peso_max', 99999)
+
     if missao_vel > 0:
         tempo_estimado = (missao_dist / missao_vel) * 60
-        comb_l = tempo_estimado * av['consumo_l_min'] * (1 + (margem_seg / 100))
-        peso_total = av['peso_base_sem_combustivel'] + av['modificacoes'][mod_sel] + av['presets_bombas'][bomb_sel] + (comb_l * 0.72)
-        
+        comb_l    = min(tempo_estimado * consumo * (1 + (margem_seg / 100)), tanque)
+        peso_total = base_peso + peso_mod + peso_bomb + (comb_l * 0.72)
+
         st.divider()
         col_res1, col_res2, col_res3 = st.columns(3)
         with col_res1:
-            if peso_total <= av['peso_max']:
-                st.success(f"⚖️ Peso Total: **{peso_total:.0f} kg** / {av['peso_max']} kg")
+            if peso_total <= peso_max:
+                st.success(f"⚖️ Peso Total: **{peso_total:.0f} kg** / {peso_max} kg")
             else:
-                st.error(f"⚠️ SOBRECARGA: **{peso_total:.0f} kg** / {av['peso_max']} kg")
+                st.error(f"⚠️ SOBRECARGA: **{peso_total:.0f} kg** / {peso_max} kg")
         with col_res2:
-            if comb_l > av['tanque_max_l']:
-                st.error(f"⛽ Combustível: **{comb_l:.0f} L** ⚠️ EXCEDE TANQUE ({av['tanque_max_l']} L)")
+            pct = min(100, (comb_l / tanque) * 100)
+            if comb_l >= tanque:
+                st.error(f"⛽ Combustível: **{comb_l:.0f} L** ⚠️ TANQUE CHEIO ({tanque} L)")
             else:
-                st.info(f"⛽ Combustível: **{comb_l:.0f} L** / {av['tanque_max_l']} L")
+                st.info(f"⛽ Combustível: **{comb_l:.0f} L** / {tanque} L ({pct:.0f}%)")
         with col_res3:
             st.info(f"⏱️ Tempo estimado: **{tempo_estimado:.0f} min** ({tempo_estimado/60:.1f}h)")
         
