@@ -221,14 +221,22 @@ db_altitudes_tecnico = {**db_altitudes_por_campanha["Rhineland"], **db_altitudes
 db_avioes = {
     # ── RHINELAND (1944-45 Eixo) ──────────────────────────────────────
     "He-111 H-16": {
-        "peso_base_sem_combustivel": 9300,  "peso_max": 14000,
-        "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
-        "climb_rate_default": 2.5,  "descent_rate_default": 4.0,
-        "armamento_fixo": "4x 7.92mm MG-81J | 1x 20mm MG-FF | 1x 13mm MG-131",
+        # Standard Weight 13017 kg | Max Weight 15689 kg | tanque ~3450L
+        "peso_base_sem_combustivel": 10533, "peso_max": 15689,
+        "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 352, "tanque_max_l": 3450,
+        "climb_rate_default": 5.0, "descent_rate_default": 4.0,
+        "armamento_fixo": "4x 7.92mm MG-15 | 1x 20mm MG/FF nariz | 1x 13mm MG-131 topo",
         "campanha": "ambas",
-        "modificacoes": {"Padrão": 0, "Remover Blindagem": -115, "Tanque Adicional": 150},
-        "presets_bombas": {"Vazio": 0, "1x SC 2500 (Max)": 2400, "2x SC 1800 (Satan)": 3560,
-                           "2x SC 1000 (Hermann)": 2180, "8x SC 250": 2000, "32x SC 50": 1600}
+        "modificacoes": {"Sem modificações": 0, "Remover Blindagem": -115, "Tanque Adicional": 150},
+        "presets_bombas": {
+            "Vazio": 0,
+            "32x SC 50 (1600kg)": 1600,
+            "8x SC 250 (2000kg)": 2000,
+            "2x SC 500 (1000kg)": 1000,
+            "2x SC 1000 (2000kg)": 2000,
+            "2x SC 1800 Satan (3600kg)": 3600,
+            "1x SC 2500 (2500kg)": 2500,
+        }
     },
     "He-111 H-6": {
         "peso_base_sem_combustivel": 9500,  "peso_max": 14000,
@@ -241,48 +249,79 @@ db_avioes = {
                            "4x SC 250": 1000, "16x SC 50": 800}
     },
     "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500,  "peso_max": 11000,
-        "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,
-        "climb_rate_default": 2.0,  "descent_rate_default": 3.0,
-        "armamento_fixo": "1x 13mm MG-131 (Dorsal)",
+        # Standard Weight 10003 kg | Max Weight 11333 kg | tanque ~1400L estimado
+        "peso_base_sem_combustivel": 9995,  "peso_max": 11333,
+        "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 229, "tanque_max_l": 1400,
+        "climb_rate_default": 2.6, "descent_rate_default": 3.5,
+        "armamento_fixo": "1x 7.92mm MG-15 torreta dorsal (1125 rds)",
         "campanha": "ambas",
-        "modificacoes": {"Padrão": 0, "Paraquedistas (12 homens)": 1200,
-                         "Carga Interna Tática": 2300, "Rodas de Inverno": 45},
-        "presets_bombas": {"Vazio": 0, "10x MAB 250 (Containers)": 2550, "12x SC 50": 600}
+        "modificacoes": {"Sem modificações": 0},
+        "presets_bombas": {
+            "Vazio": 0,
+            "2300 kg Carga Militar": 2300,
+            "10x MAB 250 containers paraquedas (2500kg)": 2500,
+            "12x Paraquedistas com munição (~1200kg)": 1200,
+        }
     },
 
     # ── KUBAN (1943 — Eixo) ───────────────────────────────────────────
     "Bf 109 G-4": {
-        "peso_base_sem_combustivel": 2558,  "peso_max": 3200,
-        "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 520, "tanque_max_l": 400,
-        "climb_rate_default": 17.0, "descent_rate_default": 15.0,
-        "armamento_fixo": "2x 7.92mm MG-17 nariz | 1x 20mm MG-151/20 hub (150 rds)",
+        # Standard Weight 3014 kg | Max Weight 3303 kg | tanque ~400L
+        "peso_base_sem_combustivel": 2726, "peso_max": 3303,
+        "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 532, "tanque_max_l": 400,
+        "climb_rate_default": 22.2, "descent_rate_default": 15.0,
+        "armamento_fixo": "2x 7.92mm MG-17 nariz (500 rds, 25s) | 1x 20mm MG-151/20 hub (200 rds, 16s)",
         "campanha": "ambas",
-        "modificacoes": {"2x 20mm MG-151/20 gondola (asas)": 120, "Sem Rádio": -20,
-                         "Tanque Auxiliar 300L": 240},
-        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
+        "modificacoes": {
+            "2x 20mm MG-151/20 asas (135 rds, 12s)": 120,
+            "Sem Rádio": -20,
+            "Tanque Auxiliar 300L": 240,
+        },
+        "presets_bombas": {
+            "Vazio": 0,
+            "4x SC 50 (200kg)": 200,
+            "1x SC 250 (250kg)": 250,
+            "1x SC 500 (500kg)": 500,
+        }
     },
 
     "Fw 190 A-5": {
-        "peso_base_sem_combustivel": 3150,  "peso_max": 4800,
-        "consumo_l_min": 6.2, "vel_cruzeiro_padrao": 530, "tanque_max_l": 524,
-        "climb_rate_default": 11.0, "descent_rate_default": 13.0,
-        "armamento_fixo": "4x 20mm MG-151/20 (asas+raiz) | 2x 7.92mm MG-17 nariz",
+        # Standard Weight 3926 kg | Max Weight 4648 kg | tanque ~524L
+        "peso_base_sem_combustivel": 3549, "peso_max": 4648,
+        "consumo_l_min": 6.2, "vel_cruzeiro_padrao": 507, "tanque_max_l": 524,
+        "climb_rate_default": 16.4, "descent_rate_default": 13.0,
+        "armamento_fixo": "2x 7.92mm MG-17 nariz (900 rds, 45s) | 2x 20mm MG-151/20 asas (250 rds, 22s)",
         "campanha": "ambas",
-        "modificacoes": {"ETC 501 Centerline Rack": 30, "2x 21cm WGr.21 rockets": 250,
-                         "Tanque Ventral 300L": 240},
-        "presets_bombas": {"Vazio": 0, "1x SC 250 (250kg)": 250, "1x SC 500 (500kg)": 500}
+        "modificacoes": {
+            "2x 20mm MG-FF/M nariz (90 rds, 9s)": 75,
+            "2x 20mm MG-151/20 gun pods asas (125 rds, 11s)": 212,
+            "ETC 501 Centerline Rack": 30,
+            "Tanque Ventral 300L": 240,
+        },
+        "presets_bombas": {
+            "Vazio": 0,
+            "4x SC 50 (200kg)": 200,
+            "1x SC 250 (250kg)": 250,
+            "1x SC 500 (500kg)": 500,
+        }
     },
     "Bf 110 G-2": {
-        "peso_base_sem_combustivel": 5200,  "peso_max": 8400,
-        "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 460, "tanque_max_l": 1270,
-        "climb_rate_default": 7.0,  "descent_rate_default": 10.0,
-        "armamento_fixo": "2x 30mm MK-108 nariz | 2x 20mm MG-151/20 nariz | 2x 7.92mm MG-81",
+        # Standard Weight 7514 kg | Max Weight 8928 kg | tanque ~1270L
+        "peso_base_sem_combustivel": 6599, "peso_max": 8928,
+        "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 491, "tanque_max_l": 1270,
+        "climb_rate_default": 17.2, "descent_rate_default": 12.0,
+        "armamento_fixo": "4x 7.92mm MG-17 nariz (1000 rds, 50s) | 2x 20mm MG-151/20 nariz (375 rds, 32s) | 2x 7.92mm MG-81 traseiro (750 rds)",
         "campanha": "ambas",
-        "modificacoes": {"2x 37mm BK 3.7 gondola": 850, "4x 50kg SC 50": 200,
-                         "Tanque Auxiliar": 300},
-        "presets_bombas": {"Vazio": 0, "2x SC 250 (500kg)": 500, "4x SC 50 (200kg)": 200,
-                           "2x SC 500 (1000kg)": 1000}
+        "modificacoes": {
+            "1x 37mm BK 3.7 Gunpod (66 rds, 25s)": 400,
+            "1x Dual MG-151/20 Gunpod (200 rds, 16s)": 250,
+        },
+        "presets_bombas": {
+            "Vazio": 0,
+            "12x SC 50 (600kg)": 600,
+            "2x SC 500 (1000kg)": 1000,
+            "1x SC 1000 (1000kg)": 1000,
+        }
     },
     "Ju 87 D-5": {
         "peso_base_sem_combustivel": 3900,  "peso_max": 6600,
@@ -376,15 +415,16 @@ db_avioes = {
 
     # ── RHINELAND 1944-45 (do TAW) ──────────────────────────────────
     "Bf 109 G-6": {
+        # Standard Weight 3100 kg | Max Weight 3400 kg | tanque ~400L
         "campanha": "ambas",
-        "peso_base_sem_combustivel": 2673, "peso_max": 3400,
-        "consumo_l_min": 5.2,          # Cruzeiro a 2000m (Combat: 8.6 L/min)
-        "vel_cruzeiro_padrao": 480, "tanque_max_l": 400,
-        "climb_rate_default": 13.0, "descent_rate_default": 15.0,
+        "peso_base_sem_combustivel": 2812, "peso_max": 3400,
+        "consumo_l_min": 5.2,
+        "vel_cruzeiro_padrao": 520, "tanque_max_l": 400,
+        "climb_rate_default": 20.8, "descent_rate_default": 15.0,
         "armamento_fixo": "2x 13mm MG-131 nariz (300 rds, 20s) | 1x 20mm MG-151/20 hub (200 rds, 16s)",
         "modificacoes": {
-            "1x 30mm MK-108 hub (65 rds, 6s) + 2x 20mm MG-151/20 asas (135 rds)": 120,
-            "2x 20mm MG-151/20 gondola (asas)": 120,
+            "1x 30mm MK-108 hub (65 rds, 6s)": 45,
+            "2x 20mm MG-151/20 asas (135 rds, 12s)": 120,
             "Sem Rádio FuG 16ZY": -20,
             "Tanque Auxiliar 300L": 240,
         },
