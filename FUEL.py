@@ -249,8 +249,10 @@ db_avioes = {
                            "4x SC 250": 1000, "16x SC 50": 800}
     },
     "Ju-52/3M": {
-        # Standard Weight 10003 kg | Max Weight 11333 kg | tanque ~1400L estimado
-        "peso_base_sem_combustivel": 9995,  "peso_max": 11333,
+        # Standard Weight 10003 kg (com tanque cheio) | Max Weight 11333 kg
+        # Margem de carga: 11333 - 10003 = 1330 kg
+        # Cargas pesadas (MAB 250, 2300kg) requerem tanque parcial no jogo
+        "peso_base_sem_combustivel": 8995, "peso_max": 11333,
         "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 229, "tanque_max_l": 1400,
         "climb_rate_default": 2.6, "descent_rate_default": 3.5,
         "armamento_fixo": "1x 7.92mm MG-15 torreta dorsal (1125 rds)",
@@ -258,9 +260,9 @@ db_avioes = {
         "modificacoes": {"Sem modificações": 0},
         "presets_bombas": {
             "Vazio": 0,
-            "2300 kg Carga Militar": 2300,
-            "10x MAB 250 containers paraquedas (2500kg)": 2500,
-            "12x Paraquedistas com munição (~1200kg)": 1200,
+            "12x Paraquedistas (~1200kg)": 1200,
+            "10x MAB 250 containers (2500kg) — tanque parcial": 2500,
+            "2300 kg Carga Militar — tanque parcial": 2300,
         }
     },
 
