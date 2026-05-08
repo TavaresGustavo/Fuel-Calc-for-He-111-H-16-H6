@@ -15,6 +15,7 @@ if 'vento_dir_cb'    not in st.session_state: st.session_state.vento_dir_cb    =
 if 'temp_cb'         not in st.session_state: st.session_state.temp_cb         = 15.0
 if 'status_cb'       not in st.session_state: st.session_state.status_cb       = "A aguardar sincronização..."
 if 'dados_campanha'  not in st.session_state: st.session_state.dados_campanha  = None
+if 'campanha_ativa'  not in st.session_state: st.session_state.campanha_ativa  = "Rhineland"
 # Clima amanhã
 if 'temp_amanha_cb'      not in st.session_state: st.session_state.temp_amanha_cb      = 15.0
 if 'vento_vel_amanha_cb' not in st.session_state: st.session_state.vento_vel_amanha_cb = 5.0
@@ -69,7 +70,7 @@ CAMPANHAS = {
 }
 
 def fetch_combatbox_data():
-    campanha = CAMPANHAS.get(st.session_state.campanha_ativa, CAMPANHAS["Rhineland"])
+    campanha = CAMPANHAS.get(st.session_state.get('campanha_ativa', 'Rhineland'), CAMPANHAS["Rhineland"])
     try:
         api_url = campanha["api"]
         response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
@@ -477,7 +478,7 @@ with st.sidebar:
 
     sidebar_countdown()
 
-camp_cfg = CAMPANHAS.get(st.session_state.campanha_ativa, CAMPANHAS["Rhineland"])
+camp_cfg = CAMPANHAS.get(st.session_state.get('campanha_ativa','Rhineland'), CAMPANHAS["Rhineland"])
 st.title(f"🛩️ Painel Tático C4ISR — {camp_cfg['label']}")
 
 # ── PLAYER FMC STICKY — aparece logo abaixo do título em todas as abas ──
@@ -1126,7 +1127,7 @@ with tab5:
 with tab6:
 
     # URL do mapa depende da campanha ativa
-    MAP_URL = CAMPANHAS.get(st.session_state.campanha_ativa, CAMPANHAS["Rhineland"])["mapa"]
+    MAP_URL = CAMPANHAS.get(st.session_state.get('campanha_ativa','Rhineland'), CAMPANHAS["Rhineland"])["mapa"]
 
     # Botão para abrir em nova aba
     st.markdown(
