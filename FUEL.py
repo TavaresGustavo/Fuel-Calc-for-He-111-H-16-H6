@@ -225,7 +225,7 @@ db_avioes = {
         "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
         "climb_rate_default": 2.5,  "descent_rate_default": 4.0,
         "armamento_fixo": "4x 7.92mm MG-81J | 1x 20mm MG-FF | 1x 13mm MG-131",
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "modificacoes": {"Padrão": 0, "Remover Blindagem": -115, "Tanque Adicional": 150},
         "presets_bombas": {"Vazio": 0, "1x SC 2500 (Max)": 2400, "2x SC 1800 (Satan)": 3560,
                            "2x SC 1000 (Hermann)": 2180, "8x SC 250": 2000, "32x SC 50": 1600}
@@ -235,7 +235,7 @@ db_avioes = {
         "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
         "climb_rate_default": 2.5,  "descent_rate_default": 4.0,
         "armamento_fixo": "6x 7.92mm MG-15",
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "modificacoes": {"Padrão": 0, "Torre Frontal (20mm)": 46, "Torre Ventral": 147, "Kit Anti-Navio": 193},
         "presets_bombas": {"Vazio": 0, "2x SC 1000": 2180, "1x SC 1800": 1780,
                            "4x SC 250": 1000, "16x SC 50": 800}
@@ -245,7 +245,7 @@ db_avioes = {
         "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,
         "climb_rate_default": 2.0,  "descent_rate_default": 3.0,
         "armamento_fixo": "1x 13mm MG-131 (Dorsal)",
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "modificacoes": {"Padrão": 0, "Paraquedistas (12 homens)": 1200,
                          "Carga Interna Tática": 2300, "Rodas de Inverno": 45},
         "presets_bombas": {"Vazio": 0, "10x MAB 250 (Containers)": 2550, "12x SC 50": 600}
@@ -257,7 +257,7 @@ db_avioes = {
         "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 520, "tanque_max_l": 400,
         "climb_rate_default": 17.0, "descent_rate_default": 15.0,
         "armamento_fixo": "2x 7.92mm MG-17 nariz | 1x 20mm MG-151/20 hub (150 rds)",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"2x 20mm MG-151/20 gondola (asas)": 120, "Sem Rádio": -20,
                          "Tanque Auxiliar 300L": 240},
         "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
@@ -268,7 +268,7 @@ db_avioes = {
         "consumo_l_min": 6.2, "vel_cruzeiro_padrao": 530, "tanque_max_l": 524,
         "climb_rate_default": 11.0, "descent_rate_default": 13.0,
         "armamento_fixo": "4x 20mm MG-151/20 (asas+raiz) | 2x 7.92mm MG-17 nariz",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"ETC 501 Centerline Rack": 30, "2x 21cm WGr.21 rockets": 250,
                          "Tanque Ventral 300L": 240},
         "presets_bombas": {"Vazio": 0, "1x SC 250 (250kg)": 250, "1x SC 500 (500kg)": 500}
@@ -278,7 +278,7 @@ db_avioes = {
         "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 460, "tanque_max_l": 1270,
         "climb_rate_default": 7.0,  "descent_rate_default": 10.0,
         "armamento_fixo": "2x 30mm MK-108 nariz | 2x 20mm MG-151/20 nariz | 2x 7.92mm MG-81",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"2x 37mm BK 3.7 gondola": 850, "4x 50kg SC 50": 200,
                          "Tanque Auxiliar": 300},
         "presets_bombas": {"Vazio": 0, "2x SC 250 (500kg)": 500, "4x SC 50 (200kg)": 200,
@@ -289,7 +289,7 @@ db_avioes = {
         "consumo_l_min": 7.5, "vel_cruzeiro_padrao": 300, "tanque_max_l": 620,
         "climb_rate_default": 4.0,  "descent_rate_default": 8.0,
         "armamento_fixo": "2x 20mm MG-151/20 (asas) | 1x 7.92mm MG-81Z dorsal",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"Sem Dive Brakes": -40, "Tanque Auxiliar": 200},
         "presets_bombas": {"Vazio": 0, "1x SC 1000 (1000kg)": 1000, "1x SC 500 (500kg)": 500,
                            "1x SC 500 + 4x SC 50 (700kg)": 700, "2x SC 250 (500kg)": 500}
@@ -299,7 +299,7 @@ db_avioes = {
         "consumo_l_min": 8.0, "vel_cruzeiro_padrao": 340, "tanque_max_l": 608,
         "climb_rate_default": 5.0,  "descent_rate_default": 8.0,
         "armamento_fixo": "2x 7.92mm MG-17 nariz | 2x 20mm MG-151/20 nariz",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"30mm MK-103 gondola (anti-tanque)": 380,
                          "75mm BK 7.5 gondola (anti-tanque pesado)": 1100,
                          "4x SC 50 gondola": 220},
@@ -311,7 +311,7 @@ db_avioes = {
         "consumo_l_min": 4.5, "vel_cruzeiro_padrao": 480, "tanque_max_l": 440,
         "climb_rate_default": 14.0, "descent_rate_default": 15.0,
         "armamento_fixo": "1x 20mm ShVAK hub (120 rds) | 1x 12.7mm UBS nariz (200 rds)",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
         "presets_bombas": {"Vazio": 0, "2x ROS-82 rockets": 32, "2x FAB-50 (100kg)": 100}
     },
@@ -320,7 +320,7 @@ db_avioes = {
         "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 470, "tanque_max_l": 440,
         "climb_rate_default": 13.0, "descent_rate_default": 14.0,
         "armamento_fixo": "1x 20mm ShVAK hub (120 rds) | 2x 12.7mm UBS nariz (400 rds)",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15},
         "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
     },
@@ -329,7 +329,7 @@ db_avioes = {
         "consumo_l_min": 6.0, "vel_cruzeiro_padrao": 500, "tanque_max_l": 539,
         "climb_rate_default": 16.0, "descent_rate_default": 16.0,
         "armamento_fixo": "2x 20mm ShVAK (nariz, 340 rds total)",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
         "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
     },
@@ -338,7 +338,7 @@ db_avioes = {
         "consumo_l_min": 6.5, "vel_cruzeiro_padrao": 530, "tanque_max_l": 539,
         "climb_rate_default": 20.0, "descent_rate_default": 17.0,
         "armamento_fixo": "2x 20mm ShVAK (nariz, 340 rds total)",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
         "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
     },
@@ -347,7 +347,7 @@ db_avioes = {
         "consumo_l_min": 9.0, "vel_cruzeiro_padrao": 380, "tanque_max_l": 730,
         "climb_rate_default": 5.5,  "descent_rate_default": 8.0,
         "armamento_fixo": "2x 23mm VYa-23 (asas) | 2x 7.62mm ShKAS (asas) | 12.7mm UBT dorsal",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"8x RS-82 rockets": 140, "8x RS-132 rockets": 280,
                          "4x RBS-82 rockets (anti-tanque)": 100},
         "presets_bombas": {"Vazio": 0, "2x FAB-250 (500kg)": 500, "4x FAB-100 (400kg)": 400,
@@ -358,7 +358,7 @@ db_avioes = {
         "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 440, "tanque_max_l": 1400,
         "climb_rate_default": 6.0,  "descent_rate_default": 9.0,
         "armamento_fixo": "2x 7.62mm ShKAS nariz | 12.7mm UBT dorsal | 12.7mm UBT ventral",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"Padrão": 0},
         "presets_bombas": {"Vazio": 0, "6x FAB-100 (600kg)": 600, "2x FAB-250 (500kg)": 500,
                            "1x FAB-500 (500kg)": 500, "10x FAB-100 (1000kg)": 1000}
@@ -368,7 +368,7 @@ db_avioes = {
         "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
         "climb_rate_default": 5.5,  "descent_rate_default": 8.0,
         "armamento_fixo": "4x 12.7mm UBK frontal | 2x 12.7mm UBT dorsal | 12.7mm UBT ventral",
-        "campanha": "Kuban",
+        "campanha": "ambas",
         "modificacoes": {"Padrão": 0},
         "presets_bombas": {"Vazio": 0, "8x FAB-100 (800kg)": 800, "4x FAB-250 (1000kg)": 1000}
     },
@@ -391,7 +391,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
     },
     "Bf 109 G-14": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 2795, "peso_max": 3565,
         "consumo_l_min": 5.2,          # Cruzeiro a 2000m (Combat: 9.4 L/min)
         "vel_cruzeiro_padrao": 546, "tanque_max_l": 400,
@@ -406,7 +406,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
     },
     "Bf 109 K-4": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         # Standard Weight 3361 kg | Max Weight 3891 kg | Tanque 400L (3361 - 400×0.72 = 3073 base)
         "peso_base_sem_combustivel": 3073, "peso_max": 3891,
         "consumo_l_min": 5.2,          # Cruzeiro (Combat: ~9.4 L/min, MW-50 Emergency: ~12 L/min)
@@ -427,7 +427,7 @@ db_avioes = {
         }
     },
     "Fw 190 A-6": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 3205, "peso_max": 4900,
         "consumo_l_min": 6.0, "vel_cruzeiro_padrao": 510, "tanque_max_l": 524,
         "climb_rate_default": 10.0, "descent_rate_default": 13.0,
@@ -436,7 +436,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "1x SC 250": 250, "1x SC 500": 500}
     },
     "Fw 190 A-8": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 3931, "peso_max": 5239,
         "consumo_l_min": 6.5, "vel_cruzeiro_padrao": 523, "tanque_max_l": 639,
         "climb_rate_default": 15.6, "descent_rate_default": 13.0,
@@ -452,7 +452,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "4x SD 70 (280kg)": 280, "3x SC 250 (750kg)": 750, "1x SC 500 (500kg)": 500}
     },
     "Fw 190 D-9": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 3490, "peso_max": 4840,
         "consumo_l_min": 6.8, "vel_cruzeiro_padrao": 580, "tanque_max_l": 524,
         "climb_rate_default": 11.0, "descent_rate_default": 14.0,
@@ -476,7 +476,7 @@ db_avioes = {
                            "28x SC 50 full load (1400kg)": 1400}
     },
     "Me 262 A-1a": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 4000, "peso_max": 7130,
         "consumo_l_min": 18.0, "vel_cruzeiro_padrao": 750, "tanque_max_l": 1900,
         "climb_rate_default": 15.0, "descent_rate_default": 18.0,
@@ -485,7 +485,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "2x SC 250": 500}
     },
     "Me 262 A-2a": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 4000, "peso_max": 7130,
         "consumo_l_min": 18.0, "vel_cruzeiro_padrao": 700, "tanque_max_l": 1900,
         "climb_rate_default": 13.0, "descent_rate_default": 16.0,
@@ -494,7 +494,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "2x SC 250 (500kg)": 500, "2x SC 500 (1000kg)": 1000}
     },
     "Spitfire Mk.IXe": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 2950, "peso_max": 3900,
         "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 480, "tanque_max_l": 386,
         "climb_rate_default": 12.0, "descent_rate_default": 15.0,
@@ -503,7 +503,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "1x 500lb GP": 227, "2x 250lb GP": 227}
     },
     "Spitfire Mk.XIVe": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 3100, "peso_max": 4200,
         "consumo_l_min": 5.5, "vel_cruzeiro_padrao": 540, "tanque_max_l": 386,
         "climb_rate_default": 14.0, "descent_rate_default": 16.0,
@@ -512,7 +512,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "1x 500lb GP": 227}
     },
     "P-47D-28": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 5490, "peso_max": 7260,
         "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 560, "tanque_max_l": 1060,
         "climb_rate_default": 8.5, "descent_rate_default": 12.0,
@@ -522,7 +522,7 @@ db_avioes = {
                            "1x 500lb + 2x 250lb": 340, "10x HVAR": 600, "3x 500lb": 680}
     },
     "P-51D-15": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 3465, "peso_max": 5490,
         "consumo_l_min": 6.2, "vel_cruzeiro_padrao": 590, "tanque_max_l": 696,
         "climb_rate_default": 10.0, "descent_rate_default": 14.0,
@@ -531,7 +531,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "2x 500lb": 454, "2x 1000lb": 907}
     },
     "Typhoon Mk.Ib": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 4445, "peso_max": 6010,
         "consumo_l_min": 9.0, "vel_cruzeiro_padrao": 520, "tanque_max_l": 496,
         "climb_rate_default": 9.0, "descent_rate_default": 13.0,
@@ -541,7 +541,7 @@ db_avioes = {
                            "8x RP-3 60lb": 432, "4x RP-3 + 2x 500lb": 681}
     },
     "Tempest Mk.V ser.2": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 4354, "peso_max": 5940,
         "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 570, "tanque_max_l": 682,
         "climb_rate_default": 11.0, "descent_rate_default": 14.0,
@@ -550,7 +550,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "2x 500lb GP": 454, "2x 1000lb GP": 907}
     },
     "B-25D Mitchell": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 8836, "peso_max": 14062,
         "consumo_l_min": 15.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 3028,
         "climb_rate_default": 4.0, "descent_rate_default": 6.0,
@@ -563,7 +563,7 @@ db_avioes = {
                            "6x 500lb (2722kg)": 1361}
     },
     "A-20G Havoc": {
-        "campanha": "Rhineland",
+        "campanha": "ambas",
         "peso_base_sem_combustivel": 7700, "peso_max": 11000,
         "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
         "climb_rate_default": 5.5, "descent_rate_default": 8.0,
