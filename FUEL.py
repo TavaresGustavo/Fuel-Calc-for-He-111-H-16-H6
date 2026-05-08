@@ -15,7 +15,7 @@ if 'vento_dir_cb'    not in st.session_state: st.session_state.vento_dir_cb    =
 if 'temp_cb'         not in st.session_state: st.session_state.temp_cb         = 15.0
 if 'status_cb'       not in st.session_state: st.session_state.status_cb       = "A aguardar sincronização..."
 if 'dados_campanha'  not in st.session_state: st.session_state.dados_campanha  = None
-if 'campanha_ativa'  not in st.session_state: st.session_state.campanha_ativa  = "Rhineland"
+if 'campanha_ativa'  not in st.session_state: st.session_state.campanha_ativa  = "Kuban"
 # Clima amanhã
 if 'temp_amanha_cb'      not in st.session_state: st.session_state.temp_amanha_cb      = 15.0
 if 'vento_vel_amanha_cb' not in st.session_state: st.session_state.vento_vel_amanha_cb = 5.0
@@ -32,7 +32,7 @@ if 'tempo_inicio_missao_absoluto' not in st.session_state: st.session_state.temp
 if 'vel_calc'            not in st.session_state: st.session_state.vel_calc            = 320.0
 if 'dist_calc'           not in st.session_state: st.session_state.dist_calc           = 250.0
 if 'last_file_hash'      not in st.session_state: st.session_state.last_file_hash      = None
-if 'av_nome_selecionado' not in st.session_state: st.session_state.av_nome_selecionado = "He-111 H-16"
+if 'av_nome_selecionado' not in st.session_state: st.session_state.av_nome_selecionado = "Bf 109 G-6 (Kuban)"
 if 'mission_end_time'   not in st.session_state: st.session_state.mission_end_time   = ""
 if 'mission_start_time' not in st.session_state: st.session_state.mission_start_time = ""
 if 'pilots_allied'      not in st.session_state: st.session_state.pilots_allied      = None
@@ -70,7 +70,7 @@ CAMPANHAS = {
 }
 
 def fetch_combatbox_data():
-    campanha = CAMPANHAS.get(st.session_state.get('campanha_ativa', 'Rhineland'), CAMPANHAS["Rhineland"])
+    campanha = CAMPANHAS.get(st.session_state.get('campanha_ativa', 'Kuban'), CAMPANHAS["Kuban"])
     try:
         api_url = campanha["api"]
         response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
@@ -348,7 +348,7 @@ db_avioes = {
 
 def get_avioes_campanha():
     """Retorna aviões filtrados pela campanha ativa (ou todos se não filtrado)."""
-    camp = st.session_state.get('campanha_ativa', 'Rhineland')
+    camp = st.session_state.get('campanha_ativa', 'Kuban')
     return {k: v for k, v in db_avioes.items() if v.get('campanha', camp) == camp}
 
 
@@ -356,7 +356,7 @@ def get_avioes_campanha():
 # ==========================================
 # 3. INTERFACE E BARRA LATERAL
 # ==========================================
-st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide", page_icon="🛩️")
+st.set_page_config(page_title="Painel Tático - Combat Box Kuban", layout="wide", page_icon="🛩️")
 st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
 
 with st.sidebar:
@@ -478,8 +478,8 @@ with st.sidebar:
 
     sidebar_countdown()
 
-camp_cfg = CAMPANHAS.get(st.session_state.get('campanha_ativa','Rhineland'), CAMPANHAS["Rhineland"])
-st.title(f"🛩️ Painel Tático C4ISR — {camp_cfg['label']}")
+camp_cfg = CAMPANHAS.get(st.session_state.get('campanha_ativa','Kuban'), CAMPANHAS["Kuban"])
+st.title("🛩️ Painel Tático C4ISR")
 
 # ── PLAYER FMC STICKY — aparece logo abaixo do título em todas as abas ──
 if st.session_state.get('cronometro_rodando') and st.session_state.get('navlog_manual'):
@@ -913,7 +913,7 @@ with tab4:
                 st.write(f"**Altitude Alvo:** {alt_arr}m")
 
         # 4. PERFORMANCE VERTICAL (VNAV)
-        av_nome = st.session_state.get('av_nome_selecionado', "He-111 H-16")
+        av_nome = st.session_state.get('av_nome_selecionado', "Bf 109 G-6 (Kuban)")
         av = db_avioes.get(av_nome, {})
 
         with st.expander("📈 Perfil de Voo", expanded=True):
@@ -1127,7 +1127,7 @@ with tab5:
 with tab6:
 
     # URL do mapa depende da campanha ativa
-    MAP_URL = CAMPANHAS.get(st.session_state.get('campanha_ativa','Rhineland'), CAMPANHAS["Rhineland"])["mapa"]
+    MAP_URL = CAMPANHAS.get(st.session_state.get('campanha_ativa','Kuban'), CAMPANHAS["Kuban"])["mapa"]
 
     # Botão para abrir em nova aba
     st.markdown(
