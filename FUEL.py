@@ -239,7 +239,7 @@ db_avioes = {
         }
     },
     "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500,  "peso_max": 14000,
+        "peso_base_sem_combustivel": 10642,  "peso_max": 15239,
         "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
         "climb_rate_default": 2.5,  "descent_rate_default": 4.0,
         "armamento_fixo": "6x 7.92mm MG-15",
@@ -326,8 +326,8 @@ db_avioes = {
         }
     },
     "Ju 87 D-5": {
-        "peso_base_sem_combustivel": 3900,  "peso_max": 6600,
-        "consumo_l_min": 7.5, "vel_cruzeiro_padrao": 300, "tanque_max_l": 620,
+        "peso_base_sem_combustivel": 4230,  "peso_max": 6684,
+        "consumo_l_min": 7.5, "vel_cruzeiro_padrao": 300, "tanque_max_l": 840,
         "climb_rate_default": 4.0,  "descent_rate_default": 8.0,
         "armamento_fixo": "2x 20mm MG-151/20 (asas) | 1x 7.92mm MG-81Z dorsal",
         "campanha": "ambas",
@@ -348,7 +348,7 @@ db_avioes = {
     },
     # ── KUBAN (1943 — Soviético) ──────────────────────────────────────
     "Yak-1B": {
-        "peso_base_sem_combustivel": 2535,  "peso_max": 3000,
+        "peso_base_sem_combustivel": 2593,  "peso_max": 3117,
         "consumo_l_min": 4.5, "vel_cruzeiro_padrao": 480, "tanque_max_l": 440,
         "climb_rate_default": 14.0, "descent_rate_default": 15.0,
         "armamento_fixo": "1x 20mm ShVAK hub (120 rds) | 1x 12.7mm UBS nariz (200 rds)",
@@ -366,7 +366,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
     },
     "La-5 ser.8": {
-        "peso_base_sem_combustivel": 2605,  "peso_max": 3400,
+        "peso_base_sem_combustivel": 2978,  "peso_max": 3593,
         "consumo_l_min": 6.0, "vel_cruzeiro_padrao": 500, "tanque_max_l": 539,
         "climb_rate_default": 16.0, "descent_rate_default": 16.0,
         "armamento_fixo": "2x 20mm ShVAK (nariz, 340 rds total)",
@@ -384,7 +384,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
     },
     "Il-2 mod.1942": {
-        "peso_base_sem_combustivel": 4360,  "peso_max": 6160,
+        "peso_base_sem_combustivel": 4768,  "peso_max": 6127,
         "consumo_l_min": 9.0, "vel_cruzeiro_padrao": 380, "tanque_max_l": 730,
         "climb_rate_default": 5.5,  "descent_rate_default": 8.0,
         "armamento_fixo": "2x 23mm VYa-23 (asas) | 2x 7.62mm ShKAS (asas) | 12.7mm UBT dorsal",
@@ -395,7 +395,7 @@ db_avioes = {
                            "2x FAB-250 + 2x FAB-100 (700kg)": 700, "4x FAB-50 (200kg)": 200}
     },
     "Pe-2 ser.87": {
-        "peso_base_sem_combustivel": 7500,  "peso_max": 10000,
+        "peso_base_sem_combustivel": 6617,  "peso_max": 8701,
         "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 440, "tanque_max_l": 1400,
         "climb_rate_default": 6.0,  "descent_rate_default": 9.0,
         "armamento_fixo": "2x 7.62mm ShKAS nariz | 12.7mm UBT dorsal | 12.7mm UBT ventral",
@@ -434,7 +434,7 @@ db_avioes = {
     },
     "Bf 109 G-14": {
         "campanha": "ambas",
-        "peso_base_sem_combustivel": 2795, "peso_max": 3565,
+        "peso_base_sem_combustivel": 2978, "peso_max": 3565,
         "consumo_l_min": 5.2,          # Cruzeiro a 2000m (Combat: 9.4 L/min)
         "vel_cruzeiro_padrao": 546, "tanque_max_l": 400,
         "climb_rate_default": 23.0, "descent_rate_default": 15.0,
@@ -495,7 +495,7 @@ db_avioes = {
     },
     "Fw 190 D-9": {
         "campanha": "ambas",
-        "peso_base_sem_combustivel": 3490, "peso_max": 4840,
+        "peso_base_sem_combustivel": 3912, "peso_max": 4832,
         "consumo_l_min": 6.8, "vel_cruzeiro_padrao": 580, "tanque_max_l": 524,
         "climb_rate_default": 11.0, "descent_rate_default": 14.0,
         "armamento_fixo": "2x 20mm MG151/20 (asa) | 2x 13mm MG131",
