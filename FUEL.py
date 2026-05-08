@@ -982,12 +982,30 @@ with tab1:
     c1, c2 = st.columns(2)
     with c1:
         avioes_camp = get_avioes_campanha()
-        av_nome = st.selectbox("Selecione a Aeronave", list(avioes_camp.keys()))
-        st.session_state.av_nome_selecionado = av_nome  # salva para o FMC
+        if not avioes_camp:
+            st.error("Nenhum avião disponível para esta campanha.")
+            st.stop()
+
+        # Garante que av_nome_selecionado existe na lista atual
+        av_default = st.session_state.get('av_nome_selecionado', list(avioes_camp.keys())[0])
+        if av_default not in avioes_camp:
+            av_default = list(avioes_camp.keys())[0]
+
+        av_nome = st.selectbox("Selecione a Aeronave", list(avioes_camp.keys()),
+                               index=list(avioes_camp.keys()).index(av_default))
+        st.session_state.av_nome_selecionado = av_nome
         av = avioes_camp[av_nome]
-        
+
+        # Reset vel_calc quando muda de avião
+        prev_av = st.session_state.get("_prev_av_nome_fuel", av_nome)
+        if av_nome != prev_av:
+            st.session_state["_prev_av_nome_fuel"] = av_nome
+            st.session_state.vel_calc = float(av['vel_cruzeiro_padrao'])
+
         missao_dist = st.number_input("Distância da Missão (km)", value=float(st.session_state.get('dist_calc', 100.0)))
-        missao_vel = st.number_input("Velocidade de Cruzeiro (km/h)", value=float(av['vel_cruzeiro_padrao']))
+        missao_vel  = st.number_input("Velocidade de Cruzeiro (km/h)", value=float(st.session_state.vel_calc), key="hangar_vel_fuel")
+        if missao_vel != st.session_state.vel_calc:
+            st.session_state.vel_calc = missao_vel
         margem_seg = st.slider("Reserva de Combustível (%)", 0, 100, 30)
     
     with c2:
