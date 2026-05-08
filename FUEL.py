@@ -50,9 +50,28 @@ def traduzir_texto(texto):
     except Exception:
         return texto 
 
+# Configuração das campanhas Combat Box
+CAMPANHAS = {
+    "Rhineland": {
+        "api":    "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx",
+        "mapa":   "https://serverror.github.io/IL2-Mission-Planner/#json-url=https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-mission-planner-latest.json.aspx",
+        "map_hash": "#rhineland",
+        "label":  "🏭 Rhineland 1944-45",
+        "coalitions": {"allied": "Allies", "axis": "Germany"},
+    },
+    "Kuban": {
+        "api":    "https://campaign-data.combatbox.net/kuban-campaign/kuban-campaign-latest.json.aspx",
+        "mapa":   "https://serverror.github.io/IL2-Mission-Planner/#json-url=https://campaign-data.combatbox.net/kuban-campaign/kuban-campaign-mission-planner-latest.json.aspx",
+        "map_hash": "#kuban",
+        "label":  "✈️ Kuban 1943",
+        "coalitions": {"allied": "USSR", "axis": "Germany"},
+    },
+}
+
 def fetch_combatbox_data():
+    campanha = CAMPANHAS.get(st.session_state.campanha_ativa, CAMPANHAS["Rhineland"])
     try:
-        api_url = "https://campaign-data.combatbox.net/rhineland-campaign/rhineland-campaign-latest.json.aspx"
+        api_url = campanha["api"]
         response = requests.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=8)
         
         if response.status_code != 200:
@@ -151,102 +170,192 @@ db_altitudes_tecnico = {
 # 2. BASE DE DADOS COMPLETA: AERONAVES (C4ISR)
 # ==========================================
 db_avioes = {
+    # ── RHINELAND (1944-45 Eixo) ──────────────────────────────────────
     "He-111 H-16": {
-        "peso_base_sem_combustivel": 9300, 
-        "peso_max": 14000, 
-        "consumo_l_min": 10.2, 
-        "vel_cruzeiro_padrao": 330, 
-        "tanque_max_l": 3450,
-        "climb_rate_default": 2.5, 
-        "descent_rate_default": 4.0,
+        "peso_base_sem_combustivel": 9300,  "peso_max": 14000,
+        "consumo_l_min": 10.2, "vel_cruzeiro_padrao": 330, "tanque_max_l": 3450,
+        "climb_rate_default": 2.5,  "descent_rate_default": 4.0,
         "armamento_fixo": "4x 7.92mm MG-81J | 1x 20mm MG-FF | 1x 13mm MG-131",
-        "modificacoes": {
-            "Padrão": 0,
-            "Remover Blindagem": -115,
-            "Tanque Adicional": 150
-        },
-        "presets_bombas": {
-            "Vazio": 0, 
-            "1x SC 2500 (Max)": 2400, 
-            "2x SC 1800 (Satan)": 3560, 
-            "2x SC 1000 (Hermann)": 2180, 
-            "8x SC 250": 2000, 
-            "32x SC 50": 1600
-        }
+        "campanha": "Rhineland",
+        "modificacoes": {"Padrão": 0, "Remover Blindagem": -115, "Tanque Adicional": 150},
+        "presets_bombas": {"Vazio": 0, "1x SC 2500 (Max)": 2400, "2x SC 1800 (Satan)": 3560,
+                           "2x SC 1000 (Hermann)": 2180, "8x SC 250": 2000, "32x SC 50": 1600}
     },
     "He-111 H-6": {
-        "peso_base_sem_combustivel": 9500, 
-        "peso_max": 14000, 
-        "consumo_l_min": 10.5, 
-        "vel_cruzeiro_padrao": 320, 
-        "tanque_max_l": 3450,
-        "climb_rate_default": 2.5, 
-        "descent_rate_default": 4.0,
+        "peso_base_sem_combustivel": 9500,  "peso_max": 14000,
+        "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 320, "tanque_max_l": 3450,
+        "climb_rate_default": 2.5,  "descent_rate_default": 4.0,
         "armamento_fixo": "6x 7.92mm MG-15",
-        "modificacoes": {
-            "Padrão": 0, 
-            "Torre Frontal (20mm)": 46, 
-            "Torre Ventral": 147, 
-            "Kit Anti-Navio": 193
-        },
-        "presets_bombas": {
-            "Vazio": 0, 
-            "2x SC 1000": 2180, 
-            "1x SC 1800": 1780, 
-            "4x SC 250": 1000, 
-            "16x SC 50": 800
-        }
+        "campanha": "Rhineland",
+        "modificacoes": {"Padrão": 0, "Torre Frontal (20mm)": 46, "Torre Ventral": 147, "Kit Anti-Navio": 193},
+        "presets_bombas": {"Vazio": 0, "2x SC 1000": 2180, "1x SC 1800": 1780,
+                           "4x SC 250": 1000, "16x SC 50": 800}
     },
     "Ju-52/3M": {
-        "peso_base_sem_combustivel": 7500, 
-        "peso_max": 11000, 
-        "consumo_l_min": 12.0, 
-        "vel_cruzeiro_padrao": 240, 
-        "tanque_max_l": 2450,   
-        "climb_rate_default": 2.0, 
-        "descent_rate_default": 3.0,
+        "peso_base_sem_combustivel": 7500,  "peso_max": 11000,
+        "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 240, "tanque_max_l": 2450,
+        "climb_rate_default": 2.0,  "descent_rate_default": 3.0,
         "armamento_fixo": "1x 13mm MG-131 (Dorsal)",
-        "modificacoes": {
-            "Padrão": 0, 
-            "Paraquedistas (12 homens)": 1200, 
-            "Carga Interna Tática": 2300, 
-            "Rodas de Inverno": 45
-        },
-        "presets_bombas": {
-            "Vazio": 0, 
-            "10x MAB 250 (Containers)": 2550,
-            "12x SC 50": 600
-        }
+        "campanha": "Rhineland",
+        "modificacoes": {"Padrão": 0, "Paraquedistas (12 homens)": 1200,
+                         "Carga Interna Tática": 2300, "Rodas de Inverno": 45},
+        "presets_bombas": {"Vazio": 0, "10x MAB 250 (Containers)": 2550, "12x SC 50": 600}
     },
     "Ju-88 A-4": {
-        "peso_base_sem_combustivel": 8600, 
-        "peso_max": 14000, 
-        "consumo_l_min": 10.0, 
-        "vel_cruzeiro_padrao": 370, 
-        "tanque_max_l": 1680,   
-        "climb_rate_default": 3.5, 
-        "descent_rate_default": 5.0,
+        "peso_base_sem_combustivel": 8600,  "peso_max": 14000,
+        "consumo_l_min": 10.0, "vel_cruzeiro_padrao": 370, "tanque_max_l": 1680,
+        "climb_rate_default": 3.5,  "descent_rate_default": 5.0,
         "armamento_fixo": "1x 13mm MG-131 | 3x 7.92mm MG-81J",
-        "modificacoes": {
-            "Padrão": 0, 
-            "Sem Dive Brakes": -60, 
-            "Sem Gôndola Inferior": -123,
-            "Câmera de Reconhecimento": 25
-        },
-        "presets_bombas": {
-            "Vazio": 0, 
-            "4x SC 500": 2000, 
-            "10x SC 50 (Interno)": 500, 
-            "28x SC 50 (Full Load)": 1400,
-            "2x SC 1000": 2180
-        }
-    }
+        "campanha": "Rhineland",
+        "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Inferior": -123,
+                         "Câmera de Reconhecimento": 25},
+        "presets_bombas": {"Vazio": 0, "4x SC 500": 2000, "10x SC 50 (Interno)": 500,
+                           "28x SC 50 (Full Load)": 1400, "2x SC 1000": 2180}
+    },
+    # ── KUBAN (1943 — Eixo) ───────────────────────────────────────────
+    "Bf 109 G-4": {
+        "peso_base_sem_combustivel": 2558,  "peso_max": 3200,
+        "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 520, "tanque_max_l": 400,
+        "climb_rate_default": 17.0, "descent_rate_default": 15.0,
+        "armamento_fixo": "2x 7.92mm MG-17 nariz | 1x 20mm MG-151/20 hub (150 rds)",
+        "campanha": "Kuban",
+        "modificacoes": {"2x 20mm MG-151/20 gondola (asas)": 120, "Sem Rádio": -20,
+                         "Tanque Auxiliar 300L": 240},
+        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
+    },
+    "Bf 109 G-6 (Kuban)": {
+        "peso_base_sem_combustivel": 2673,  "peso_max": 3400,
+        "consumo_l_min": 5.2, "vel_cruzeiro_padrao": 480, "tanque_max_l": 400,
+        "climb_rate_default": 13.0, "descent_rate_default": 15.0,
+        "armamento_fixo": "2x 13mm MG-131 nariz (300 rds) | 1x 20mm MG-151/20 hub (200 rds)",
+        "campanha": "Kuban",
+        "modificacoes": {"1x 30mm MK-108 hub + 2x 20mm MG-151/20 asas (135 rds)": 120,
+                         "2x 20mm MG-151/20 gondola (asas)": 120,
+                         "Sem Rádio FuG 16ZY": -20, "Tanque Auxiliar 300L": 240},
+        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "1x SC 250 (250kg)": 250}
+    },
+    "Fw 190 A-5": {
+        "peso_base_sem_combustivel": 3150,  "peso_max": 4800,
+        "consumo_l_min": 6.2, "vel_cruzeiro_padrao": 530, "tanque_max_l": 524,
+        "climb_rate_default": 11.0, "descent_rate_default": 13.0,
+        "armamento_fixo": "4x 20mm MG-151/20 (asas+raiz) | 2x 7.92mm MG-17 nariz",
+        "campanha": "Kuban",
+        "modificacoes": {"ETC 501 Centerline Rack": 30, "2x 21cm WGr.21 rockets": 250,
+                         "Tanque Ventral 300L": 240},
+        "presets_bombas": {"Vazio": 0, "1x SC 250 (250kg)": 250, "1x SC 500 (500kg)": 500}
+    },
+    "Bf 110 G-2": {
+        "peso_base_sem_combustivel": 5200,  "peso_max": 8400,
+        "consumo_l_min": 9.5, "vel_cruzeiro_padrao": 460, "tanque_max_l": 1270,
+        "climb_rate_default": 7.0,  "descent_rate_default": 10.0,
+        "armamento_fixo": "2x 30mm MK-108 nariz | 2x 20mm MG-151/20 nariz | 2x 7.92mm MG-81",
+        "campanha": "Kuban",
+        "modificacoes": {"2x 37mm BK 3.7 gondola": 850, "4x 50kg SC 50": 200,
+                         "Tanque Auxiliar": 300},
+        "presets_bombas": {"Vazio": 0, "2x SC 250 (500kg)": 500, "4x SC 50 (200kg)": 200,
+                           "2x SC 500 (1000kg)": 1000}
+    },
+    "Ju 87 D-5": {
+        "peso_base_sem_combustivel": 3900,  "peso_max": 6600,
+        "consumo_l_min": 7.5, "vel_cruzeiro_padrao": 300, "tanque_max_l": 620,
+        "climb_rate_default": 4.0,  "descent_rate_default": 8.0,
+        "armamento_fixo": "2x 20mm MG-151/20 (asas) | 1x 7.92mm MG-81Z dorsal",
+        "campanha": "Kuban",
+        "modificacoes": {"Sem Dive Brakes": -40, "Tanque Auxiliar": 200},
+        "presets_bombas": {"Vazio": 0, "1x SC 1000 (1000kg)": 1000, "1x SC 500 (500kg)": 500,
+                           "1x SC 500 + 4x SC 50 (700kg)": 700, "2x SC 250 (500kg)": 500}
+    },
+    "Hs 129 B-2": {
+        "peso_base_sem_combustivel": 3700,  "peso_max": 5250,
+        "consumo_l_min": 8.0, "vel_cruzeiro_padrao": 340, "tanque_max_l": 608,
+        "climb_rate_default": 5.0,  "descent_rate_default": 8.0,
+        "armamento_fixo": "2x 7.92mm MG-17 nariz | 2x 20mm MG-151/20 nariz",
+        "campanha": "Kuban",
+        "modificacoes": {"30mm MK-103 gondola (anti-tanque)": 380,
+                         "75mm BK 7.5 gondola (anti-tanque pesado)": 1100,
+                         "4x SC 50 gondola": 220},
+        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "2x SC 50 (100kg)": 100}
+    },
+    # ── KUBAN (1943 — Soviético) ──────────────────────────────────────
+    "Yak-1B": {
+        "peso_base_sem_combustivel": 2535,  "peso_max": 3000,
+        "consumo_l_min": 4.5, "vel_cruzeiro_padrao": 480, "tanque_max_l": 440,
+        "climb_rate_default": 14.0, "descent_rate_default": 15.0,
+        "armamento_fixo": "1x 20mm ShVAK hub (120 rds) | 1x 12.7mm UBS nariz (200 rds)",
+        "campanha": "Kuban",
+        "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
+        "presets_bombas": {"Vazio": 0, "2x ROS-82 rockets": 32, "2x FAB-50 (100kg)": 100}
+    },
+    "Yak-7B": {
+        "peso_base_sem_combustivel": 2650,  "peso_max": 3230,
+        "consumo_l_min": 4.8, "vel_cruzeiro_padrao": 470, "tanque_max_l": 440,
+        "climb_rate_default": 13.0, "descent_rate_default": 14.0,
+        "armamento_fixo": "1x 20mm ShVAK hub (120 rds) | 2x 12.7mm UBS nariz (400 rds)",
+        "campanha": "Kuban",
+        "modificacoes": {"Sem Rádio": -15},
+        "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
+    },
+    "La-5 ser.8": {
+        "peso_base_sem_combustivel": 2605,  "peso_max": 3400,
+        "consumo_l_min": 6.0, "vel_cruzeiro_padrao": 500, "tanque_max_l": 539,
+        "climb_rate_default": 16.0, "descent_rate_default": 16.0,
+        "armamento_fixo": "2x 20mm ShVAK (nariz, 340 rds total)",
+        "campanha": "Kuban",
+        "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
+        "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
+    },
+    "La-5FN": {
+        "peso_base_sem_combustivel": 2648,  "peso_max": 3530,
+        "consumo_l_min": 6.5, "vel_cruzeiro_padrao": 530, "tanque_max_l": 539,
+        "climb_rate_default": 20.0, "descent_rate_default": 17.0,
+        "armamento_fixo": "2x 20mm ShVAK (nariz, 340 rds total)",
+        "campanha": "Kuban",
+        "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
+        "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
+    },
+    "Il-2 mod.1942": {
+        "peso_base_sem_combustivel": 4360,  "peso_max": 6160,
+        "consumo_l_min": 9.0, "vel_cruzeiro_padrao": 380, "tanque_max_l": 730,
+        "climb_rate_default": 5.5,  "descent_rate_default": 8.0,
+        "armamento_fixo": "2x 23mm VYa-23 (asas) | 2x 7.62mm ShKAS (asas) | 12.7mm UBT dorsal",
+        "campanha": "Kuban",
+        "modificacoes": {"8x RS-82 rockets": 140, "8x RS-132 rockets": 280,
+                         "4x RBS-82 rockets (anti-tanque)": 100},
+        "presets_bombas": {"Vazio": 0, "2x FAB-250 (500kg)": 500, "4x FAB-100 (400kg)": 400,
+                           "2x FAB-250 + 2x FAB-100 (700kg)": 700, "4x FAB-50 (200kg)": 200}
+    },
+    "Pe-2 ser.87": {
+        "peso_base_sem_combustivel": 7500,  "peso_max": 10000,
+        "consumo_l_min": 10.5, "vel_cruzeiro_padrao": 440, "tanque_max_l": 1400,
+        "climb_rate_default": 6.0,  "descent_rate_default": 9.0,
+        "armamento_fixo": "2x 7.62mm ShKAS nariz | 12.7mm UBT dorsal | 12.7mm UBT ventral",
+        "campanha": "Kuban",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0, "6x FAB-100 (600kg)": 600, "2x FAB-250 (500kg)": 500,
+                           "1x FAB-500 (500kg)": 500, "10x FAB-100 (1000kg)": 1000}
+    },
+    "A-20G Havoc (VVS)": {
+        "peso_base_sem_combustivel": 7700,  "peso_max": 11000,
+        "consumo_l_min": 12.0, "vel_cruzeiro_padrao": 420, "tanque_max_l": 2196,
+        "climb_rate_default": 5.5,  "descent_rate_default": 8.0,
+        "armamento_fixo": "4x 12.7mm UBK frontal | 2x 12.7mm UBT dorsal | 12.7mm UBT ventral",
+        "campanha": "Kuban",
+        "modificacoes": {"Padrão": 0},
+        "presets_bombas": {"Vazio": 0, "8x FAB-100 (800kg)": 800, "4x FAB-250 (1000kg)": 1000}
+    },
 }
+
+def get_avioes_campanha():
+    """Retorna aviões filtrados pela campanha ativa (ou todos se não filtrado)."""
+    camp = st.session_state.get('campanha_ativa', 'Rhineland')
+    return {k: v for k, v in db_avioes.items() if v.get('campanha', camp) == camp}
+
+
 
 # ==========================================
 # 3. INTERFACE E BARRA LATERAL
 # ==========================================
-st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide")
+st.set_page_config(page_title="Painel Tático - Combat Box", layout="wide", page_icon="🛩️")
 st.markdown("""<style>.stApp { background-color: #0E1117; color: #FAFAFA; }</style>""", unsafe_allow_html=True)
 
 with st.sidebar:
@@ -368,7 +477,8 @@ with st.sidebar:
 
     sidebar_countdown()
 
-st.title("🛩️ Painel Tático C4ISR")
+camp_cfg = CAMPANHAS.get(st.session_state.campanha_ativa, CAMPANHAS["Rhineland"])
+st.title(f"🛩️ Painel Tático C4ISR — {camp_cfg['label']}")
 
 # ── PLAYER FMC STICKY — aparece logo abaixo do título em todas as abas ──
 if st.session_state.get('cronometro_rodando') and st.session_state.get('navlog_manual'):
@@ -510,13 +620,41 @@ with tab1:
                             coords    = plano["latLngs"]
                             speeds    = plano.get("speeds", [])
                             altitudes = plano.get("altitudes", [])
+
+                            # Detecta unidades do plano (imperial = mph/ft, metric = km/h/m)
+                            is_imperial = dados_plano.get("units", "metric").lower() == "imperial"
+
+                            # Fatores calibrados por mapa (coordenadas IL-2 não são geográficas reais)
+                            MAP_FACTORS = {
+                                '#normandy':  {'metric': 3.990, 'imperial': 2.4796},
+                                '#rheinland': {'metric': 3.872, 'imperial': 2.4060},
+                                '#stalingrad':{'metric': 3.872, 'imperial': 2.4060},
+                                '#moscow':    {'metric': 3.872, 'imperial': 2.4060},
+                                '#kuban':     {'metric': 3.872, 'imperial': 2.4060},
+                                '#bodenplatte':{'metric':3.872, 'imperial': 2.4060},
+                            }
+                            map_hash = dados_plano.get('mapHash', '#rheinland').lower()
+                            factors  = MAP_FACTORS.get(map_hash, MAP_FACTORS['#rheinland'])
+                            dist_factor = factors['imperial'] if is_imperial else factors['metric']
+
                             navlog_temp = []
                             dist_total  = 0.0
                             for i in range(len(coords) - 1):
-                                rumo, dist = calcular_rumo_e_distancia(coords[i], coords[i+1])
+                                dlng = coords[i+1]['lng'] - coords[i]['lng']
+                                dlat = coords[i+1]['lat'] - coords[i]['lat']
+                                rumo = (math.degrees(math.atan2(dlng, dlat)) + 360) % 360
+                                dist = math.sqrt(dlng**2 + dlat**2) * dist_factor  # sempre km
+
                                 dist_total += dist
-                                vel_p = int(speeds[i])      if i < len(speeds)        else int(plano.get("speed", 330))
-                                alt_p = int(altitudes[i+1]) if i+1 < len(altitudes)  else int(plano.get("altitude", 2000))
+
+                                # Velocidade: converte mph→km/h se imperial
+                                vel_raw = int(speeds[i]) if i < len(speeds) else int(plano.get("speed", 330))
+                                vel_p   = round(vel_raw * 1.60934) if is_imperial else vel_raw
+
+                                # Altitude: converte ft→m se imperial
+                                alt_raw = int(altitudes[i+1]) if i+1 < len(altitudes) else int(plano.get("altitude", 2000))
+                                alt_p   = round(alt_raw * 0.3048) if is_imperial else alt_raw
+
                                 navlog_temp.append({
                                     "Perna":          f"WP{i}➔WP{i+1}",
                                     "Distância (km)": round(dist, 1),
@@ -528,7 +666,8 @@ with tab1:
                             st.session_state.dist_calc     = dist_total
                             if navlog_temp:
                                 st.session_state.vel_calc = float(navlog_temp[0]["TAS (km/h)"])
-                            st.success(f"✅ {len(navlog_temp)} pernas extraídas de '{plano.get('name','Rota')}' → NavLog atualizado!")
+                            unidade_txt = "imperial (mph/ft→km/h/m)" if is_imperial else "metric"
+                            st.success(f"✅ {len(navlog_temp)} pernas de '{plano.get('name','Rota')}' [{unidade_txt}] → NavLog atualizado!")
                     else:
                         st.session_state.navlog_manual = dados_plano
                         st.session_state.dist_calc = sum(item.get("Distância (km)", 0) for item in dados_plano)
@@ -547,9 +686,10 @@ with tab1:
     # --- Seleção de Avião e Pesos ---
     c1, c2 = st.columns(2)
     with c1:
-        av_nome = st.selectbox("Selecione a Aeronave", list(db_avioes.keys()))
+        avioes_camp = get_avioes_campanha()
+        av_nome = st.selectbox("Selecione a Aeronave", list(avioes_camp.keys()))
         st.session_state.av_nome_selecionado = av_nome  # salva para o FMC
-        av = db_avioes[av_nome]
+        av = avioes_camp[av_nome]
         
         missao_dist = st.number_input("Distância da Missão (km)", value=float(st.session_state.get('dist_calc', 100.0)))
         missao_vel = st.number_input("Velocidade de Cruzeiro (km/h)", value=float(av['vel_cruzeiro_padrao']))
@@ -640,15 +780,21 @@ with tab3:
     st.divider()
 
     # --- INPUTS DO VENTO ---
+    # Sincroniza TAS do navlog importado → session_state
+    if st.session_state.navlog_manual:
+        tas_from_plan = st.session_state.navlog_manual[0].get("TAS (km/h)", st.session_state.vel_calc)
+        if abs(float(tas_from_plan) - st.session_state.vel_calc) > 1:
+            st.session_state.vel_calc = float(tas_from_plan)
+
+    # Combat Box tem apenas vento de superfície — usa vento da API (0m)
     c_tas, c_dir, c_vel = st.columns(3)
     with c_tas:
-        # Pega a velocidade da primeira perna se existir
-        def_tas = float(st.session_state.navlog_manual[0].get("TAS (km/h)", st.session_state.vel_calc)) if st.session_state.navlog_manual else float(st.session_state.vel_calc)
-        nav_tas = st.number_input("Sua TAS esperada (km/h)", value=def_tas, step=10.0)
+        nav_tas = st.number_input("Sua TAS esperada (km/h)", value=float(st.session_state.vel_calc), step=10.0, key="nav_tas_cb")
     with c_dir:
         nav_w_dir = st.number_input("Vento vindo DE (°)", value=float(st.session_state.vento_dir_cb), key="nav_dir_e6b")
     with c_vel:
         nav_w_spd = st.number_input("Vel. Vento (km/h)", value=float(st.session_state.vento_vel_cb * 3.6), step=5.0, key="nav_spd_e6b")
+        st.caption(f"API Combat Box: {st.session_state.vento_vel_cb} m/s = {st.session_state.vento_vel_cb*3.6:.1f} km/h")
 
     # --- NAVLOG EDITÁVEL ---
     st.subheader("📝 Navigation Log (Diário de Rota)")
@@ -979,11 +1125,8 @@ with tab5:
 # ==========================================
 with tab6:
 
-    MAP_URL = (
-        "https://serverror.github.io/IL2-Mission-Planner/"
-        "#json-url=https://campaign-data.combatbox.net/"
-        "rhineland-campaign/rhineland-campaign-mission-planner-latest.json.aspx"
-    )
+    # URL do mapa depende da campanha ativa
+    MAP_URL = CAMPANHAS.get(st.session_state.campanha_ativa, CAMPANHAS["Rhineland"])["mapa"]
 
     # Botão para abrir em nova aba
     st.markdown(
