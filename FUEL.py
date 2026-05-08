@@ -1021,13 +1021,26 @@ with tab1:
         margem_seg = st.slider("Reserva de Combustível (%)", 0, 100, 30)
     
     with c2:
-        mods_disponiveis = {k: v for k, v in av.get('modificacoes', {}).items()}
-        mod_sel  = st.selectbox("Modificações", list(mods_disponiveis.keys()) or ["Padrão"])
+        # Modificações: multiselect — permite combinar várias e soma os pesos
+        mods_disponiveis = {k: v for k, v in av.get('modificacoes', {}).items()
+                            if k not in ('Padrão', 'Sem modificações')}
+        mods_sel = st.multiselect(
+            "✅ Modificações (selecione várias)",
+            options=list(mods_disponiveis.keys()),
+            default=[],
+            format_func=lambda x: f"{x}  ({'+' if mods_disponiveis[x]>=0 else ''}{mods_disponiveis[x]} kg)"
+        )
+        peso_modificacoes = sum(mods_disponiveis[m] for m in mods_sel)
+        if mods_sel:
+            st.caption(f"⚙️ Peso total das mods: **{peso_modificacoes:+d} kg**")
+        else:
+            st.caption("⚙️ Sem modificações (configuração Padrão)")
+
         bomb_sel = st.selectbox("Carga de Bombas", list(av.get('presets_bombas', {"Vazio": 0}).keys()))
         st.caption(f"🛡️ Armamento Fixo: {av.get('armamento_fixo', 'Não listado')}")
 
     # --- Cálculos Logísticos ---
-    peso_mod   = av.get('modificacoes', {}).get(mod_sel, 0)
+    peso_mod   = peso_modificacoes
     peso_bomb  = av.get('presets_bombas', {}).get(bomb_sel, 0)
     tanque     = av.get('tanque_max_l', 1)
     consumo    = av.get('consumo_l_min', 1)
