@@ -11,6 +11,7 @@ from deep_translator import GoogleTranslator
 # 0. INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE)
 # ==========================================
 if 'vento_vel_cb'    not in st.session_state: st.session_state.vento_vel_cb    = 5.0
+if 'vento_altitudes_cb' not in st.session_state: st.session_state.vento_altitudes_cb = []
 if 'vento_dir_cb'    not in st.session_state: st.session_state.vento_dir_cb    = 45.0
 if 'temp_cb'         not in st.session_state: st.session_state.temp_cb         = 15.0
 if 'status_cb'       not in st.session_state: st.session_state.status_cb       = "A aguardar sincronização..."
@@ -101,6 +102,11 @@ def fetch_combatbox_data():
         bearing_amanha_bruto = float(wind_amanha.get("Bearing", 45.0))
         st.session_state.vento_dir_amanha_cb = (bearing_amanha_bruto + 180) % 360
         
+        # Calcula vento estimado por altitude
+        st.session_state.vento_altitudes_cb = calcular_vento_por_altitude(
+            st.session_state.vento_vel_cb,
+            st.session_state.vento_dir_cb
+        )
         st.session_state.status_cb = "✅ API Sincronizada!"
             
     except Exception as e:
@@ -142,6 +148,28 @@ def fetch_pilots_online():
     except Exception as e:
         st.session_state.status_cb = f"❌ Erro de Ligação: {e}"
 
+# Perfil de vento estimado por altitude (baseado no modelo de Ekman simplificado)
+# O IL-2 usa vento linear — estima com base no vento de superfície da API
+WIND_ALTITUDE_PROFILE = [
+    {"alt": "0 m",     "vel_factor": 1.00, "dir_offset":  0},
+    {"alt": "500 m",   "vel_factor": 1.20, "dir_offset":  5},
+    {"alt": "1000 m",  "vel_factor": 1.40, "dir_offset":  8},
+    {"alt": "2000 m",  "vel_factor": 1.60, "dir_offset": 12},
+    {"alt": "3500 m",  "vel_factor": 1.90, "dir_offset": 15},
+    {"alt": "5000 m",  "vel_factor": 2.20, "dir_offset": 18},
+    {"alt": "7500 m",  "vel_factor": 2.60, "dir_offset": 20},
+    {"alt": "10000 m", "vel_factor": 3.00, "dir_offset": 22},
+]
+
+def calcular_vento_por_altitude(vel_superficie, dir_superficie):
+    """Estima vento em cada camada de altitude a partir do vento de superfície."""
+    rows = []
+    for layer in WIND_ALTITUDE_PROFILE:
+        vel = round(vel_superficie * layer["vel_factor"], 1)
+        dir_est = (dir_superficie + layer["dir_offset"]) % 360
+        rows.append({"Alt": layer["alt"], "Dir": f"{dir_est:.0f}°", "Vel": f"{vel} m/s"})
+    return rows
+
 def calcular_rumo_e_distancia(p1, p2):
     # No IL-2 Mission Planner (Rheinland):
     # lat cresce para NORTE (menos negativo = mais norte), lng cresce para LESTE.
@@ -156,16 +184,36 @@ def calcular_rumo_e_distancia(p1, p2):
 # ==========================================
 # 2.1 BASE DE DADOS DEFINITIVA (ALTITUDES)
 # ==========================================
-db_altitudes_tecnico = {
-    "Aachen": 190, "Achmer": 54, "Bad Lippspringe": 140, "Breitscheid": 558,
-    "Chievres": 59, "Coesfeld-Lette": 80, "Deelen": 48, "Deurne": 12,
-    "Diest": 27, "Dortmund": 129, "Eudenbach": 360, "Florennes": 285,
-    "Gilze-Rijen": 15, "Greven": 48, "Guetersloh": 80, "Kirchhellen": 67,
-    "Liege": 201, "Limburg": 31, "Melsbroek": 56, "Nivelles": 103,
-    "Petit Brogel": 61, "Plantluenne": 35, "Quackenbrueck": 24, "Schiphol": 0,
-    "Sint-Denijs-Westrem": 8, "Soesterberg": 20, "Stoermede": 90,
-    "Strassfeld": 161, "Twente": 35, "Venlo": 30, "Volkel": 14, "Woensdrecht": 19
+# Aeródromos por campanha (altitude em metros)
+db_altitudes_por_campanha = {
+    "Rhineland": {
+        "Aachen": 190, "Achmer": 54, "Bad Lippspringe": 140, "Breitscheid": 558,
+        "Chievres": 59, "Coesfeld-Lette": 80, "Deelen": 48, "Deurne": 12,
+        "Diest": 27, "Dortmund": 129, "Eudenbach": 360, "Florennes": 285,
+        "Gilze-Rijen": 15, "Greven": 48, "Guetersloh": 80, "Kirchhellen": 67,
+        "Liege": 201, "Limburg": 31, "Melsbroek": 56, "Nivelles": 103,
+        "Petit Brogel": 61, "Plantluenne": 35, "Quackenbrueck": 24, "Schiphol": 0,
+        "Sint-Denijs-Westrem": 8, "Soesterberg": 20, "Stoermede": 90,
+        "Strassfeld": 161, "Twente": 35, "Venlo": 30, "Volkel": 14, "Woensdrecht": 19,
+    },
+    "Kuban": {
+        # Alemão
+        "Severskaya": 50, "Holmskaya": 42, "Myskhako": 10, "Ol Hovka": 85,
+        "Khankov": 90, "Krasno": 75, "Popovich": 30, "Semisotka": 5,
+        "Taman": 8, "Timashevskaya": 22, "Zamorsk": 12, "Zaporo": 20,
+        # Soviético
+        "Gelendzhik": 15, "Pashkovskaya": 25, "Agoy": 8,
+        "Belorechenskaya": 250, "Korenovskaya": 30, "Lazarevskoe": 12,
+        "Maikop-2": 220, "Mirskaya": 60, "Vyselki": 45,
+    },
 }
+
+def get_altitudes_campanha():
+    camp = st.session_state.get('campanha_ativa', 'Kuban')
+    return db_altitudes_por_campanha.get(camp, db_altitudes_por_campanha["Kuban"])
+
+# Manter compatibilidade com código antigo
+db_altitudes_tecnico = {**db_altitudes_por_campanha["Rhineland"], **db_altitudes_por_campanha["Kuban"]}
 
 # ==========================================
 # 2. BASE DE DADOS COMPLETA: AERONAVES (C4ISR)
@@ -387,6 +435,18 @@ with st.sidebar:
         v2 = st.session_state.vento_vel_amanha_cb
         d2 = st.session_state.vento_dir_amanha_cb
         t2 = st.session_state.temp_amanha_cb
+        winds = st.session_state.get('vento_altitudes_cb', [])
+
+        # Gera HTML da tabela de vento por altitude
+        wind_rows_html = ""
+        for w in winds:
+            wind_rows_html += (
+                f'<div style="display:flex;justify-content:space-between;color:#eee;font-size:11px;'
+                f'border-bottom:1px solid #1e2a1e;padding:1px 0;">'
+                f'<span style="color:#888;width:55px;">{w["Alt"]}</span>'
+                f'<span>{w["Dir"]}</span>'
+                f'<span style="color:#7ec8e3;">{w["Vel"]}</span></div>'
+            )
 
         st.markdown(
             f'<div style="font-family:sans-serif;font-size:12px;line-height:1.6;">'
@@ -396,7 +456,7 @@ with st.sidebar:
             f'<div style="color:#eee;font-weight:bold;">{dia_txt}</div>'
             f'<div style="color:#aaa;font-size:11px;margin-top:2px;">'
             f'🏆 {win_txt} &nbsp;|&nbsp; ⏳ {rem_txt} dias restantes</div></div>'
-            f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;">'
+            f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;margin-bottom:8px;">'
             f'<div style="color:#aaa;font-size:11px;letter-spacing:.5px;margin-bottom:6px;">🌦️ METEOROLOGIA</div>'
             f'<div style="background:#0d1117;border-radius:5px;padding:5px 8px;margin-bottom:5px;">'
             f'<div style="color:#f5a623;font-size:10px;font-weight:bold;margin-bottom:3px;">☀️ HOJE</div>'
@@ -407,8 +467,16 @@ with st.sidebar:
             f'<div style="color:#7ec8e3;font-size:10px;font-weight:bold;margin-bottom:3px;">🌙 AMANHÃ</div>'
             f'<div style="display:flex;gap:12px;color:#eee;">'
             f'<span>💨 {v2} m/s</span><span>🧭 {d2:.0f}°</span><span>🌡️ {t2} °C</span>'
-            f'</div></div>'
-            f'</div></div>',
+            f'</div></div></div>'
+            + (
+                f'<div style="background:#161b22;border-radius:6px;padding:7px 10px;">'
+                f'<div style="color:#7ec8e3;font-size:10px;font-weight:bold;margin-bottom:3px;">💨 VENTO EST. POR ALTITUDE</div>'
+                f'<div style="color:#555;font-size:9px;margin-bottom:3px;">⚠️ Estimativa — API fornece apenas superfície</div>'
+                + wind_rows_html +
+                f'</div>'
+                if wind_rows_html else ''
+            )
+            + f'</div>',
             unsafe_allow_html=True
         )
 
@@ -895,7 +963,7 @@ with tab4:
     else:
         # 2. FONTE DE DADOS DEFINITIVA (SEU DB)
         # Ordenamos a lista alfabeticamente para facilitar a busca
-        lista_aerodromos_db = sorted(list(db_altitudes_tecnico.keys()))
+        lista_aerodromos_db = sorted(list(get_altitudes_campanha().keys()))
 
         # 3. INTERFACE DE SELEÇÃO
         with st.expander("🌍 Configuração de Aeródromos (DB Interno)", expanded=True):
@@ -904,12 +972,12 @@ with tab4:
             with col_dep:
                 # Agora o menu usa estritamente a sua lista do DB
                 base_dep = st.selectbox("Decolagem de:", lista_aerodromos_db, key="fmc_dep_estatico")
-                alt_dep = db_altitudes_tecnico[base_dep] # Acesso direto, sem fallback necessário
+                alt_dep = get_altitudes_campanha().get(base_dep, 0)
                 st.write(f"**Altitude Base:** {alt_dep}m")
                 
             with col_arr:
                 base_arr = st.selectbox("Destino Final:", lista_aerodromos_db, key="fmc_arr_estatico")
-                alt_arr = db_altitudes_tecnico[base_arr]
+                alt_arr = get_altitudes_campanha().get(base_arr, 0)
                 st.write(f"**Altitude Alvo:** {alt_arr}m")
 
         # 4. PERFORMANCE VERTICAL (VNAV)
@@ -1036,6 +1104,35 @@ with tab5:
             texto_ontem = dados.get('PreviousDaysEventsDescription', '')
             st.write(traduzir_texto(texto_ontem) if texto_ontem else "Sem registros adicionais.")
         
+        st.divider()
+
+        # --- 1b. METEOROLOGIA E VENTO POR ALTITUDE ---
+        weather = dados.get('Weather', {})
+        wdesc   = weather.get('WindDescription', '')
+        wcloud  = weather.get('CloudDescription', '')
+        wtemp   = weather.get('Temperature', '—')
+        wtempdesc = weather.get('TemperatureDescription', '')
+        cloud_cfg = weather.get('CloudConfig', {})
+        cloud_base = cloud_cfg.get('CloudLevel', '—')
+
+        st.subheader("🌦️ Meteorologia da Missão")
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            st.info(
+                f"**Vento:** {wdesc}\n\n"
+                f"**Nuvens:** {wcloud} &nbsp;|&nbsp; Base: {cloud_base} m\n\n"
+                f"**Temperatura:** {wtemp} °C ({wtempdesc})"
+            )
+        with col_m2:
+            winds = st.session_state.get('vento_altitudes_cb', [])
+            if winds:
+                st.markdown("**💨 Vento Estimado por Altitude**")
+                st.caption("⚠️ Estimativa baseada no vento de superfície — CB não fornece dados por altitude")
+                import pandas as pd
+                df_w = pd.DataFrame(winds)
+                df_w.columns = ['Altitude', 'Direção', 'Velocidade']
+                st.dataframe(df_w, use_container_width=True, hide_index=True)
+
         st.divider()
 
         # --- 2. FUNÇÕES DE FILTRAGEM (TAG: ActiveToday) ---
