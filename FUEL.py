@@ -228,15 +228,32 @@ db_avioes = {
         "climb_rate_default": 5.0, "descent_rate_default": 4.0,
         "armamento_fixo": "4x 7.92mm MG-15 | 1x 20mm MG/FF nariz | 1x 13mm MG-131 topo",
         "campanha": "ambas",
-        "modificacoes": {"Sem modificações": 0, "Remover Blindagem": -115, "Tanque Adicional": 150},
+        "modificacoes": {
+            "Rack 2x SC 1000 (externo)": 30,
+            "Rack 2x SC 1800 (externo)": 30,
+            "Rack SC 2500 (externo)": 30,
+            "Remover Blindagem": -115,
+            "Tanque Adicional": 150,
+        },
         "presets_bombas": {
             "Vazio": 0,
-            "32x SC 50 (1600kg)": 1600,
-            "8x SC 250 (2000kg)": 2000,
-            "2x SC 500 (1000kg)": 1000,
+            # Interno (sem rack externo)
+            "32x SC 50 interno (1600kg)": 1600,
+            "8x SC 250 interno (2000kg)": 2000,
+            # Rack 2x SC 1000
             "2x SC 1000 (2000kg)": 2000,
-            "2x SC 1800 Satan (3600kg)": 3600,
-            "1x SC 2500 (2500kg)": 2500,
+            "2x SC 1000 + 16x SC 50 (2800kg)": 2800,
+            "2x SC 1000 + 4x SC 250 (3000kg)": 3000,
+            # Rack 2x SC 1800
+            "2x SC 1800 (3560kg)": 3560,
+            "1x SC 1800 + 16x SC 50 (2580kg)": 2580,
+            "1x SC 1800 + 4x SC 250 (2780kg)": 2780,
+            "1x SC 1800 + 1x SC 1000 (2780kg)": 2780,
+            # Rack SC 2500
+            "1x SC 2500 (2400kg)": 2400,
+            "1x SC 2500 + 16x SC 50 (3200kg)": 3200,
+            "1x SC 2500 + 4x SC 250 (3400kg)": 3400,
+            "1x SC 2500 + 1x SC 1000 (3400kg)": 3400,
         }
     },
     "He-111 H-6": {
