@@ -322,9 +322,9 @@ db_avioes = {
         },
         "presets_bombas": {
             "Vazio": 0,
-            "4x SC 50 (200kg)": 200,
-            "1x SC 250 (250kg)": 250,
-            "1x SC 500 (500kg)": 500,
+            "8x SC 50 (+282kg)": 282,
+            "1x SC 250 (+279kg)": 279,
+            "1x SC 500 (+530kg)": 530,
         }
     },
     "Bf 110 G-2": {
@@ -369,7 +369,10 @@ db_avioes = {
         "modificacoes": {"30mm MK-103 gondola (anti-tanque)": 380,
                          "75mm BK 7.5 gondola (anti-tanque pesado)": 1100,
                          "4x SC 50 gondola": 220},
-        "presets_bombas": {"Vazio": 0, "4x SC 50 (200kg)": 200, "2x SC 50 (100kg)": 100}
+        "presets_bombas": {"Vazio": 0,
+            "6x SC 50 (+369kg)": 369,
+            "1x SC 250 (+279kg)": 279,
+        }
     },
     # ── KUBAN (1943 — Soviético) ──────────────────────────────────────
     "Yak-1B": {
@@ -379,7 +382,11 @@ db_avioes = {
         "armamento_fixo": "1x 20mm ShVAK hub (120 rds) | 1x 12.7mm UBS nariz (200 rds)",
         "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
-        "presets_bombas": {"Vazio": 0, "2x ROS-82 rockets": 32, "2x FAB-50 (100kg)": 100}
+        "presets_bombas": {
+            "Vazio": 0,
+            "2x FAB-50sv (+120kg)": 120,
+            "2x FAB-100M (+228kg)": 228,
+        }
     },
     "Yak-7B": {
         "peso_base_sem_combustivel": 2650,  "peso_max": 3230,
@@ -388,7 +395,11 @@ db_avioes = {
         "armamento_fixo": "1x 20mm ShVAK hub (120 rds) | 2x 12.7mm UBS nariz (400 rds)",
         "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15},
-        "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
+        "presets_bombas": {
+            "Vazio": 0,
+            "2x FAB-50sv (+120kg)": 120,
+            "2x FAB-100M (+228kg)": 228,
+        }
     },
     "La-5 ser.8": {
         "peso_base_sem_combustivel": 2978,  "peso_max": 3593,
@@ -397,7 +408,11 @@ db_avioes = {
         "armamento_fixo": "2x 20mm ShVAK (nariz, 340 rds total)",
         "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
-        "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
+        "presets_bombas": {
+            "Vazio": 0,
+            "2x FAB-50sv (+120kg)": 120,
+            "2x FAB-100M (+228kg)": 228,
+        }
     },
     "La-5FN": {
         "peso_base_sem_combustivel": 2648,  "peso_max": 3530,
@@ -406,7 +421,11 @@ db_avioes = {
         "armamento_fixo": "2x 20mm ShVAK (nariz, 340 rds total)",
         "campanha": "ambas",
         "modificacoes": {"Sem Rádio": -15, "Tanque Auxiliar": 180},
-        "presets_bombas": {"Vazio": 0, "2x FAB-50 (100kg)": 100}
+        "presets_bombas": {
+            "Vazio": 0,
+            "2x FAB-50sv (+120kg)": 120,
+            "2x FAB-100M (+228kg)": 228,
+        }
     },
     "Il-2 mod.1942": {
         "peso_base_sem_combustivel": 4768,  "peso_max": 6127,
