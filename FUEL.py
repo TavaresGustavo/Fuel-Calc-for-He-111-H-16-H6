@@ -265,7 +265,12 @@ db_avioes = {
         "campanha": "ambas",
         "modificacoes": {"Padrão": 0, "Torre Frontal (20mm)": 46, "Torre Ventral": 147, "Kit Anti-Navio": 193},
         "presets_bombas": {"Vazio": 0, "2x SC 1000": 2180, "1x SC 1800": 1780,
-                           "4x SC 250": 1000, "16x SC 50": 800}
+                           "16x SC 50 interno (800kg)": 800,
+            "4x SC 250 interno (1000kg)": 1000,
+            "2x SC 1000 (+2180kg)": 2180,
+            "2x SC 1000 + 16x SC 50 (2980kg)": 2980,
+            "2x SC 1000 + 4x SC 250 (3180kg)": 3180,
+            "2x SC 1800 (+3560kg)": 3560,}
     },
     "Ju-52/3M": {
         # Standard Weight 10003 kg (com tanque cheio) | Max Weight 11333 kg
@@ -301,9 +306,8 @@ db_avioes = {
         },
         "presets_bombas": {
             "Vazio": 0,
-            "4x SC 50 (200kg)": 200,
-            "1x SC 250 (250kg)": 250,
-            "1x SC 500 (500kg)": 500,
+            "4x SC 50 (+260kg)": 260,
+            "1x SC 250 (+279kg)": 279,
         }
     },
 
@@ -358,7 +362,12 @@ db_avioes = {
         "campanha": "ambas",
         "modificacoes": {"Sem Dive Brakes": -40, "Tanque Auxiliar": 200},
         "presets_bombas": {"Vazio": 0, "1x SC 1000 (1000kg)": 1000, "1x SC 500 (500kg)": 500,
-                           "1x SC 500 + 4x SC 50 (700kg)": 700, "2x SC 250 (500kg)": 500}
+                           "4x SD 70 (+304kg)": 304,
+            "1x SC 250 (+279kg)": 279,
+            "3x SC 250 (+747kg)": 747,
+            "1x SC 500 (+530kg)": 530,
+            "1x SC 1000 (+1140kg)": 1140,
+            "1x SC 1800 (+1780kg)": 1780,}
     },
     "Hs 129 B-2": {
         "peso_base_sem_combustivel": 3700,  "peso_max": 5250,
@@ -436,7 +445,12 @@ db_avioes = {
         "modificacoes": {"8x RS-82 rockets": 140, "8x RS-132 rockets": 280,
                          "4x RBS-82 rockets (anti-tanque)": 100},
         "presets_bombas": {"Vazio": 0, "2x FAB-250 (500kg)": 500, "4x FAB-100 (400kg)": 400,
-                           "2x FAB-250 + 2x FAB-100 (700kg)": 700, "4x FAB-50 (200kg)": 200}
+                           "4x FAB-50sv (+228kg)": 228,
+            "2x FAB-100M (+228kg)": 228,
+            "2x FAB-250 (+498kg)": 498,
+            "4x FAB-100 + 2x FAB-250 (996kg)": 996,
+            "8x RS-82 rockets (+168kg)": 168,
+            "8x RS-132 rockets (+280kg)": 280,}
     },
     "Pe-2 ser.87": {
         "peso_base_sem_combustivel": 6617,  "peso_max": 8701,
@@ -447,7 +461,10 @@ db_avioes = {
         "campanha": "ambas",
         "modificacoes": {"Padrão": 0},
         "presets_bombas": {"Vazio": 0, "6x FAB-100 (600kg)": 600, "2x FAB-250 (500kg)": 500,
-                           "1x FAB-500 (500kg)": 500, "10x FAB-100 (1000kg)": 1000}
+                           "6x FAB-100 interno (+600kg)": 600,
+            "2x FAB-250 interno (+500kg)": 500,
+            "6x FAB-100 + 2x FAB-250 (1100kg)": 1100,
+            "1x FAB-500 (+500kg)": 500,}
     },
     "A-20G Havoc (VVS)": {
         "peso_base_sem_combustivel": 7700,  "peso_max": 11000,
@@ -557,12 +574,13 @@ db_avioes = {
         "armamento_fixo": "1x 13mm MG131 frontal | 3x 7.92mm MG81J",
         "modificacoes": {"Padrão": 0, "Sem Dive Brakes": -60, "Sem Gôndola Ventral": -123, "Câmera Recon Rb 50/30": 25},
         "presets_bombas": {"Vazio": 0,
-                           "4x SC 250 (1000kg)": 1000,
-                           "2x SC 500 (1000kg)": 1000,
-                           "4x SC 500 (2000kg)": 2000,
-                           "2x SC 1000 Hermann (2180kg)": 2180,
-                           "10x SC 50 interno (500kg)": 500,
-                           "28x SC 50 full load (1400kg)": 1400}
+                           "44x SC 50 (+2640kg)": 2640,
+            "10x SC 50 interno (+500kg)": 500,
+            "4x SC 250 (+996kg)": 996,
+            "2x SC 500 (+1000kg)": 1000,
+            "4x SC 500 (+2000kg)": 2000,
+            "2x SC 1000 (+2180kg)": 2180,
+            "1x SC 1800 (+1780kg)": 1780,}
     },
     "Me 262 A-1a": {
         "campanha": "ambas",
@@ -610,7 +628,10 @@ db_avioes = {
         "armamento_fixo": "8x .50 cal M2 Browning",
         "modificacoes": {"Padrão": 0, "Tanque Ventral 200gal": 560, "Sem Tanque Ventral": 0},
         "presets_bombas": {"Vazio": 0, "2x 500lb": 454, "2x 1000lb": 907,
-                           "1x 500lb + 2x 250lb": 340, "10x HVAR": 600, "3x 500lb": 680}
+                           "2x 500lb (+454kg)": 454,
+            "2x 1000lb (+907kg)": 907,
+            "3x 500lb (+680kg)": 680,
+            "10x HVAR rockets (+600kg)": 600,}
     },
     "P-51D-15": {
         "campanha": "ambas",
@@ -629,7 +650,10 @@ db_avioes = {
         "armamento_fixo": "4x 20mm Hispano Mk.II",
         "modificacoes": {"Padrão": 0, "Tanque de Fuselagem": 204},
         "presets_bombas": {"Vazio": 0, "2x 500lb GP": 454, "2x 1000lb GP": 907,
-                           "8x RP-3 60lb": 432, "4x RP-3 + 2x 500lb": 681}
+                           "2x 500lb GP (+454kg)": 454,
+            "2x 1000lb GP (+907kg)": 907,
+            "8x RP-3 rockets (+432kg)": 432,
+            "4x RP-3 + 2x 500lb (+681kg)": 681,}
     },
     "Tempest Mk.V ser.2": {
         "campanha": "ambas",
@@ -665,7 +689,7 @@ db_avioes = {
         "presets_bombas": {"Vazio": 0,
                            "8x 250lb (907kg)": 907,
                            "4x 500lb (907kg)": 907,
-                           "2x 500lb + 4x 250lb": 680}
+                           "2x 500lb + 4x 250lb (+680kg)": 680,}
     },
 
 }
