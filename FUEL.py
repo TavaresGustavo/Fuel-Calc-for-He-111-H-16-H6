@@ -810,6 +810,27 @@ with st.sidebar:
                 f'<div style="text-align:center;font-size:9px;color:#555;margin-top:2px;">COALITION BALANCE</div>'
                 f'</div>'
             )
+            # Supply bar (critério de vitória)
+            _dados = st.session_state.dados_campanha
+            if _dados:
+                a_sup = _dados.get('AlliedSupplyToday', 0)
+                x_sup = _dados.get('AxisSupplyToday', 0)
+                tot_s = max(a_sup + x_sup, 1)
+                p_a   = int(a_sup / tot_s * 100)
+                p_x   = 100 - p_a
+                warn_a = "🚨 " if a_sup < 1350 else ""
+                warn_x = "🚨 " if x_sup < 1350 else ""
+                pilots_html += (
+                    f'<div style="background:#161b22;border-radius:6px;padding:6px 10px;margin-bottom:8px;">'
+                    f'<div style="color:#aaa;font-size:10px;margin-bottom:3px;">📦 SUPPLY (derrota < 900)</div>'
+                    f'<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;">'
+                    f'<span style="color:#dd4444;">{warn_a}Allied: {a_sup:,}</span>'
+                    f'<span style="color:#4488cc;">Axis: {x_sup:,} {warn_x}</span></div>'
+                    f'<div style="display:flex;height:8px;border-radius:3px;overflow:hidden;">'
+                    f'<div style="width:{p_a}%;background:#aa2222;"></div>'
+                    f'<div style="width:{p_x}%;background:#2255aa;"></div>'
+                    f'</div></div>'
+                )
 
         countdown_html = ""
         end_str = st.session_state.mission_end_time
@@ -1644,6 +1665,141 @@ with tab5:
             for o in axis_o:
                 st.markdown(f":red[🎯 **{o.get('Name')}**]")
                 st.caption(traduzir_texto(o.get('Description', '')))
+
+        st.divider()
+
+        # --- 6. COALITION BALANCE + SUPPLY (critério de vitória) ─────────
+        st.subheader("⚖️ Balanço da Coalizão")
+
+        allied_pts  = dados.get('AlliedControlledPointsToday', 0)
+        axis_pts    = dados.get('AxisControlledPointsToday', 0)
+        allied_sup  = dados.get('AlliedSupplyToday', 0)
+        axis_sup    = dados.get('AxisSupplyToday', 0)
+        total_pts   = max(allied_pts + axis_pts, 1)
+        allied_pct  = allied_pts / total_pts * 100
+        axis_pct    = axis_pts   / total_pts * 100
+        SUPPLY_LOSS = 900  # limiar de derrota (CB padrão)
+
+        # Barra de controlo de território
+        col_cb1, col_cb2 = st.columns(2)
+        with col_cb1:
+            st.markdown("**🗺️ Controlo de Território**")
+            st.markdown(
+                f'<div style="display:flex;height:22px;border-radius:4px;overflow:hidden;margin:4px 0;">'
+                f'<div style="width:{allied_pct:.1f}%;background:#3366cc;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:bold;">{allied_pct:.0f}%</div>'
+                f'<div style="width:{axis_pct:.1f}%;background:#cc3333;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:bold;">{axis_pct:.0f}%</div>'
+                f'</div>'
+                f'<div style="display:flex;justify-content:space-between;font-size:11px;color:#888;">'
+                f'<span>🔵 Allies: {allied_pts} pts</span><span>Axis: {axis_pts} pts 🔴</span></div>',
+                unsafe_allow_html=True
+            )
+        with col_cb2:
+            st.markdown("**📦 Supply (derrota < 900)**")
+            for coalizao, sup, cor in [("🔵 Allies", allied_sup, "#3366cc"), ("🔴 Axis", axis_sup, "#cc3333")]:
+                sup_pct = min(100, sup / max(allied_sup + axis_sup, 1) * 100)
+                alerta  = " 🚨" if sup < SUPPLY_LOSS * 1.5 else ""
+                st.markdown(
+                    f'<div style="margin-bottom:4px;">'
+                    f'<span style="font-size:11px;color:#aaa;">{coalizao}: {sup:,}{alerta}</span>'
+                    f'<div style="height:10px;background:#1e1e1e;border-radius:3px;overflow:hidden;">'
+                    f'<div style="width:{sup_pct:.1f}%;height:100%;background:{cor};opacity:0.8;"></div></div></div>',
+                    unsafe_allow_html=True
+                )
+
+        # Movimento da linha de frente
+        frontline_summary = dados.get('FrontLineMovementSummary', '')
+        if frontline_summary:
+            st.caption(f"📍 {frontline_summary}")
+
+        st.divider()
+
+        # --- 7. BALANÇO DE PERDAS ─────────────────────────────────────────
+        st.subheader("💀 Balanço de Perdas")
+        losses_a = dados.get('LossesAllied', {})
+        losses_x = dados.get('LossesAxis',   {})
+        loss_fields = [
+            ("✈️ Aeronaves", "Aircraft"),
+            ("👤 Pilotos",   "Pilots"),
+            ("🏭 Edifícios", "Buildings"),
+            ("🚗 Veículos",  "Vehicles"),
+            ("🚢 Navios",    "Ships"),
+        ]
+        col_la, col_lx = st.columns(2)
+        with col_la:
+            st.markdown("**🔵 Allied Losses**")
+            for label, key in loss_fields:
+                val = losses_a.get(key, 0)
+                if val > 0:
+                    st.metric(label, f"{val:,}")
+        with col_lx:
+            st.markdown("**🔴 Axis Losses**")
+            for label, key in loss_fields:
+                val = losses_x.get(key, 0)
+                if val > 0:
+                    st.metric(label, f"{val:,}")
+
+        st.divider()
+
+        # --- 8. OPERAÇÕES DE PARAQUEDISTAS (exclusivo CB / Ju-52) ─────────
+        para_ontem    = dados.get('ParatrooperOpsYesterday', [])
+        para_cumul    = dados.get('ParatrooperOpsCumulative', [])
+        if para_ontem or para_cumul:
+            st.subheader("🪂 Operações de Paraquedistas (Ju-52)")
+            col_po1, col_po2 = st.columns(2)
+            with col_po1:
+                st.markdown("**📅 Ontem**")
+                if para_ontem:
+                    for op in para_ontem:
+                        dz_pct = round(op.get('DroppedInDz', 0) / max(op.get('Embarked', 1), 1) * 100)
+                        st.markdown(
+                            f"**{op.get('Player')}** — "
+                            f"Embarcados: {op.get('Embarked')} | "
+                            f"Na DZ: {op.get('DroppedInDz')} ({dz_pct}%) | "
+                            f"Fora DZ: {op.get('DroppedOffTarget')} | "
+                            f"Perdidos: {op.get('Lost')}"
+                        )
+                else:
+                    st.caption("Sem operações ontem.")
+            with col_po2:
+                st.markdown("**📊 Acumulado da Campanha**")
+                if para_cumul:
+                    for op in para_cumul:
+                        total_dz  = op.get('DroppedInDz', 0)
+                        total_emb = op.get('Embarked', 0)
+                        dz_pct    = round(total_dz / max(total_emb, 1) * 100)
+                        st.markdown(
+                            f"**{op.get('Player')}** — "
+                            f"Total embarcados: {total_emb} | "
+                            f"Na DZ: {total_dz} ({dz_pct}%) | "
+                            f"Perdidos: {op.get('Lost')}"
+                        )
+                else:
+                    st.caption("Sem histórico acumulado.")
+            st.divider()
+
+        # --- 9. PILOT STREAKS ─────────────────────────────────────────────
+        streaks_a = sorted(dados.get('PilotStreaksAllied', []),
+                           key=lambda x: x.get('SuccessfulMissionStreak', 0), reverse=True)[:10]
+        streaks_x = sorted(dados.get('PilotStreaksAxis',   []),
+                           key=lambda x: x.get('SuccessfulMissionStreak', 0), reverse=True)[:10]
+        if streaks_a or streaks_x:
+            st.subheader("🏅 Pilot Streaks")
+            col_sa, col_sx = st.columns(2)
+            with col_sa:
+                st.markdown("**🔵 Allied Top Streaks**")
+                for p in streaks_a:
+                    streak = p.get('SuccessfulMissionStreak', 0)
+                    bonus  = p.get('StreakBonus', 0)
+                    if streak > 0:
+                        st.markdown(f"🔥 **{p.get('Name')}** — {streak} missões | bônus +{bonus*100:.0f}%")
+            with col_sx:
+                st.markdown("**🔴 Axis Top Streaks**")
+                for p in streaks_x:
+                    streak = p.get('SuccessfulMissionStreak', 0)
+                    bonus  = p.get('StreakBonus', 0)
+                    if streak > 0:
+                        st.markdown(f"🔥 **{p.get('Name')}** — {streak} missões | bônus +{bonus*100:.0f}%")
+
 # ==========================================
 # ABA 6: MAPA TÁTICO (IL-2 MISSION PLANNER)
 # ==========================================
