@@ -1533,6 +1533,29 @@ with tab4:
 # ABA 5: INTELIGÊNCIA TÁTICA (C4ISR)
 # ==========================================
 with tab5:
+    st.markdown("""
+        <style>
+        html, body,
+        [data-testid="stApp"],
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        [data-testid="stMainBlockContainer"],
+        [data-testid="stVerticalBlock"],
+        [data-testid="stVerticalBlockBorderWrapper"],
+        .main, .block-container {
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+        }
+        html, body { height: 100% !important; min-height: 100vh !important; }
+        [data-testid="stMainBlockContainer"] {
+            padding-left:  20px !important;
+            padding-right: 20px !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
     st.header("🌐 Inteligência Tática e Logística (C4ISR)")
     
     if not st.session_state.get('dados_campanha'):
