@@ -229,9 +229,6 @@ db_avioes = {
         "armamento_fixo": "4x 7.92mm MG-15 | 1x 20mm MG/FF nariz | 1x 13mm MG-131 topo",
         "campanha": "ambas",
         "modificacoes": {
-            "Rack 2x SC 1000 (externo)": 30,
-            "Rack 2x SC 1800 (externo)": 30,
-            "Rack SC 2500 (externo)": 30,
             "Remover Blindagem": -115,
             "Tanque Adicional": 150,
         },
@@ -321,7 +318,6 @@ db_avioes = {
         "modificacoes": {
             "2x 20mm MG-FF/M nariz (90 rds, 9s)": 75,
             "2x 20mm MG-151/20 gun pods asas (125 rds, 11s)": 212,
-            "ETC 501 Centerline Rack": 30,
             "Tanque Ventral 300L": 240,
         },
         "presets_bombas": {
@@ -537,7 +533,7 @@ db_avioes = {
         "consumo_l_min": 6.0, "vel_cruzeiro_padrao": 510, "tanque_max_l": 524,
         "climb_rate_default": 10.0, "descent_rate_default": 13.0,
         "armamento_fixo": "4x 20mm MG151/20 (asa+raiz) | 2x 13mm MG131",
-        "modificacoes": {"Padrão": 0, "ETC 501 (bomba)": 30, "Sem blindagem piloto": -50},
+        "modificacoes": {"Padrão": 0, "Sem blindagem piloto": -50},
         "presets_bombas": {"Vazio": 0, "1x SC 250": 250, "1x SC 500": 500}
     },
     "Fw 190 A-8": {
@@ -551,7 +547,6 @@ db_avioes = {
             "30mm MK-108 guns (2x asas, 55 rds)": 120,
             "21cm BR Rockets (2x)": 180,
             "Sturmjäger (blindagem extra)": 95,
-            "ETC 501 Centerline Bomb Rack": 30,
             "Remoção MG-131 (-peso)": -40,
         },
         "presets_bombas": {"Vazio": 0, "4x SD 70 (280kg)": 280, "3x SC 250 (750kg)": 750, "1x SC 500 (500kg)": 500}
